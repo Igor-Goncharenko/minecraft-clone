@@ -105,6 +105,7 @@ int main(void) {
 
     while (!glfwWindowShouldClose(window)) {
         process_input(window);
+        camera_process_input(&cam, window);
         camera_update(&cam, scr_width, scr_height);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);

@@ -1,5 +1,9 @@
 #include "camera.h"
 
+#include <cglm/cglm.h>
+
+#include "gfx.h"
+
 void camera_update(struct Camera *cam, const int scr_width, const int scr_height) {
     vec3 center;
     glm_vec3_add(cam->pos, cam->front, center);
@@ -24,5 +28,22 @@ void camera_init(struct Camera *cam, const int scr_width, const int scr_height) 
 
     glm_cross(cam->front, cam->up, cam->right);
 
+    cam->speed = CAM_DEFAULT_SPEED;
+
     camera_update(cam, scr_width, scr_height);
+}
+
+void camera_process_input(struct Camera *cam, GLFWwindow *window) {
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        glm_vec3_muladds(cam->front, cam->speed, cam->pos);
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        glm_vec3_muladds(cam->front, -cam->speed, cam->pos);
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        glm_vec3_muladds(cam->right, -cam->speed, cam->pos);
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        glm_vec3_muladds(cam->right, cam->speed, cam->pos);
+    }
 }
