@@ -7,19 +7,6 @@ OBJ_DIR = $(BUILD_DIR)/obj
 PROJECT_NAME= minecraft-clone
 VERSION = 0.0.1
 
-DEBUG_EXEC = $(BUILD_DIR)/debug-$(VERSION)/$(PROJECT_NAME)-$(VERSION)-debug.out
-RELEASE_EXEC = $(BUILD_DIR)/release-$(VERSION)/$(PROJECT_NAME)-$(VERSION).out
-
-CC = gcc
-CFLAGS = -std=c11 -Wall -Wextra -Werror
-CFLAGS += -Iinclude -I$(LIB_DIR)/glad/include
-LDFLAGS = -lm -ldl -lpthread
-
-SRC = $(wildcard $(SRC_DIR)/*.c)
-SRC += $(LIB_DIR)/glad/src/glad.c
-
-OBJ = $(SRC:%.c=$(OBJ_DIR)/%.o)
-
 CGLM_DIR = $(LIB_DIR)/cglm
 CGLM_BUILD_DIR = $(CGLM_DIR)/build
 CGLM_LIB = $(CGLM_BUILD_DIR)/libcglm.a
@@ -29,6 +16,19 @@ GLFW_BUILD_DIR = $(GLFW_DIR)/build
 GLFW_LIB = $(GLFW_BUILD_DIR)/src/libglfw3.a
 
 LIBS = $(CGLM_LIB) $(GLFW_LIB)
+
+DEBUG_EXEC = $(BUILD_DIR)/debug-$(VERSION)/$(PROJECT_NAME)-$(VERSION)-debug.out
+RELEASE_EXEC = $(BUILD_DIR)/release-$(VERSION)/$(PROJECT_NAME)-$(VERSION).out
+
+CC = gcc
+CFLAGS = -std=c11 -Wall -Wextra -Werror
+CFLAGS += -Iinclude -I$(LIB_DIR)/glad/include -I$(GLFW_DIR)/include -I$(CGLM_DIR)/include
+LDFLAGS = -lm -ldl -lpthread
+
+SRC = $(wildcard $(SRC_DIR)/*.c)
+SRC += $(LIB_DIR)/glad/src/glad.c
+
+OBJ = $(SRC:%.c=$(OBJ_DIR)/%.o)
 
 .PHONY: all release debug valgrind gdb clean
 
