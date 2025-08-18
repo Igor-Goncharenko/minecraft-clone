@@ -23,7 +23,7 @@ RELEASE_EXEC = $(BUILD_DIR)/release-$(VERSION)/$(PROJECT_NAME)-$(VERSION).out
 CC = gcc
 CFLAGS = -std=c11 -Wall -Wextra -Werror
 CFLAGS += -Iinclude -I$(LIB_DIR)/glad/include -I$(GLFW_DIR)/include -I$(CGLM_DIR)/include
-LDFLAGS = -lm -ldl -lpthread
+LDFLAGS = -lm -ldl -lpthread $(LIBS)
 
 SRC = $(wildcard $(SRC_DIR)/*.c)
 SRC += $(LIB_DIR)/glad/src/glad.c
