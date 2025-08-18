@@ -4,6 +4,8 @@ INC_DIR = include
 BUILD_DIR = build
 OBJ_DIR = $(BUILD_DIR)/obj
 
+PROJECT_ROOT := $(shell pwd)
+
 PROJECT_NAME= minecraft-clone
 VERSION = 0.0.1
 
@@ -23,6 +25,7 @@ RELEASE_EXEC = $(BUILD_DIR)/release-$(VERSION)/$(PROJECT_NAME)-$(VERSION).out
 CC = gcc
 CFLAGS = -std=c11 -Wall -Wextra -Werror
 CFLAGS += -Iinclude -I$(LIB_DIR)/glad/include -I$(GLFW_DIR)/include -I$(CGLM_DIR)/include
+CFLAGS += -DPROJECT_ROOT=\"$(PROJECT_ROOT)\"
 LDFLAGS = -lm -ldl -lpthread $(LIBS)
 
 SRC = $(wildcard $(SRC_DIR)/*.c)
