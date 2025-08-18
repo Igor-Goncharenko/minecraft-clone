@@ -2,6 +2,7 @@ LIB_DIR = libs
 SRC_DIR = src
 INC_DIR = include
 BUILD_DIR = build
+OBJ_DIR = $(BUILD_DIR)/obj
 
 PROJECT_NAME= minecraft-clone
 VERSION = 0.0.1
@@ -17,7 +18,7 @@ LDFLAGS = -lm -ldl -lpthread
 SRC = $(wildcard $(SRC_DIR)/*.c)
 SRC += $(LIB_DIR)/glad/src/glad.c
 
-OBJ = $(SRC:.c=.o)
+OBJ = $(SRC:%.c=$(OBJ_DIR)/%.o)
 
 CGLM_DIR = $(LIB_DIR)/cglm
 CGLM_BUILD_DIR = $(CGLM_DIR)/build
@@ -46,10 +47,10 @@ run: release
 	./$(RELEASE_EXEC)
 
 release: CFLAGS += -O3
-release: $(RELEASE_EXEC)
+release: clean_obj $(RELEASE_EXEC)
 
 debug: CFLAGS += -O0 -g -DMC_DEBUG
-debug: $(DEBUG_EXEC)
+debug: clean_obj $(DEBUG_EXEC)
 
 $(CGLM_LIB):
 	@mkdir -p $(CGLM_DIR)/build
@@ -69,9 +70,13 @@ $(RELEASE_EXEC): $(LIBS) $(OBJ)
 	@mkdir -p $(@D)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-$(BUILD_DIR)/obj/%.o: %.c
+$(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(@D)
 	$(CC) -o $@ -c $< $(CFLAGS)
+
+clean_obj:
+	@echo "Cleaning obj files"
+	@rm -rf $(OBJ_DIR)
 
 clean:
 	@rm -rf $(BUILD_DIR)
