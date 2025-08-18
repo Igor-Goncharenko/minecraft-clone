@@ -9,17 +9,17 @@
 #define VERTEX_SHADER PROJECT_ROOT "/shaders/basic.vs"
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
 
-static void error_callback(int error, const char* description) {
+static void error_callback(int error, const char *description) {
     fprintf(stderr, "GLFW ERROR %d: %s\n", error, description);
 }
 
-static void framebuffer_size_cb(GLFWwindow* window, int width, int height) {
+static void framebuffer_size_cb(GLFWwindow *window, int width, int height) {
     UNUSED(window);
     glViewport(0, 0, width, height);
 }
 
 static void process_input(GLFWwindow *window) {
-    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
@@ -58,21 +58,21 @@ int main(void) {
     shader_t shader = shader_create(VERTEX_SHADER, FRAGMENT_SHADER);
 
     float vertices[] = {
-         0.5f,  0.5f, 0.0f,  // top right
-         0.5f, -0.5f, 0.0f,  // bottom right
+        0.5f,  0.5f,  0.0f,  // top right
+        0.5f,  -0.5f, 0.0f,  // bottom right
         -0.5f, -0.5f, 0.0f,  // bottom left
-        -0.5f,  0.5f, 0.0f   // top left 
+        -0.5f, 0.5f,  0.0f   // top left
     };
     unsigned int indices[] = {
-        0, 1, 3,   // first triangle
-        1, 2, 3    // second triangle
-    };  
-    
+        0, 1, 3,  // first triangle
+        1, 2, 3   // second triangle
+    };
+
     unsigned VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
-    
+
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -81,7 +81,7 @@ int main(void) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -90,11 +90,10 @@ int main(void) {
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    while (!glfwWindowShouldClose(window))
-    {
-		process_input(window);
+    while (!glfwWindowShouldClose(window)) {
+        process_input(window);
 
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         shader_bind(shader);
@@ -111,7 +110,7 @@ int main(void) {
     shader_destroy(shader);
 
     glfwDestroyWindow(window);
-    
+
     glfwTerminate();
     return EXIT_SUCCESS;
 }
