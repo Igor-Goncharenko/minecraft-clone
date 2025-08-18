@@ -1,5 +1,6 @@
 #include "shader.h"
 
+#include <cglm/cglm.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -78,4 +79,8 @@ void shader_destroy(shader_t shader) {
 
 void shader_bind(const shader_t shader) {
     glUseProgram(shader);
+}
+
+void shader_uniform_mat4(const shader_t shader_id, const char *name, const mat4 m) {
+    glUniformMatrix4fv(glGetUniformLocation(shader_id, name), 1, GL_FALSE, (const float *)m);
 }

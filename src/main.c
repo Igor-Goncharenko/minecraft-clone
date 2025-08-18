@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "camera.h"
 #include "gfx.h"
 #include "shader.h"
 
@@ -9,12 +10,16 @@
 #define VERTEX_SHADER PROJECT_ROOT "/shaders/basic.vs"
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
 
+int scr_width = 800, scr_height = 600;
+
 static void error_callback(int error, const char *description) {
     fprintf(stderr, "GLFW ERROR %d: %s\n", error, description);
 }
 
 static void framebuffer_size_cb(GLFWwindow *window, int width, int height) {
     UNUSED(window);
+    scr_width = width;
+    scr_height = height;
     glViewport(0, 0, width, height);
 }
 
@@ -25,6 +30,7 @@ static void process_input(GLFWwindow *window) {
 
 int main(void) {
     GLFWwindow *window = NULL;
+    struct Camera cam;
 
     glfwSetErrorCallback(error_callback);
 
@@ -68,6 +74,8 @@ int main(void) {
         1, 2, 3   // second triangle
     };
 
+    camera_init(&cam, scr_width, scr_height);
+
     unsigned VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -90,13 +98,24 @@ int main(void) {
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+    mat4 model;
+    glm_mat4_identity(model);
+    vec3 axis = {1.0f, 0.0f, 0.0f};
+    glm_rotate(model, glm_rad(30.0f), axis);
+
     while (!glfwWindowShouldClose(window)) {
         process_input(window);
+        camera_update(&cam, scr_width, scr_height);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         shader_bind(shader);
+
+        shader_uniform_mat4(shader, "model", model);
+        shader_uniform_mat4(shader, "view", cam.view);
+        shader_uniform_mat4(shader, "projection", cam.proj);
+
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
