@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,6 +13,8 @@
 
 int scr_width = 800, scr_height = 600;
 float scr_xoffset = 0.0f, scr_yoffset = 0.0f;
+bool is_wireframe = false;
+bool is_wireframe_prev = true;
 
 static void error_callback(int error, const char *description) {
     fprintf(stderr, "GLFW ERROR %d: %s\n", error, description);
@@ -27,6 +30,10 @@ static void framebuffer_size_cb(GLFWwindow *window, int width, int height) {
 static void process_input(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
+    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS && is_wireframe == is_wireframe_prev)
+        is_wireframe = !is_wireframe;
+    else if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_RELEASE)
+        is_wireframe_prev = is_wireframe;
 }
 
 static void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
@@ -149,8 +156,6 @@ int main(void) {
 
     glBindVertexArray(0);
 
-    // glPolygonMode(GL_FRONT_AND_BACK, 1 ? GL_LINE : GL_FILL);
-
     shader_bind(shader);
     shader_uniform_3_floats(shader, "dirLight.direction", -0.2f, -1.0f, -0.3f);
     shader_uniform_3_floats(shader, "dirLight.ambient", 0.1f, 0.1f, 0.1f);
@@ -176,6 +181,8 @@ int main(void) {
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glPolygonMode(GL_FRONT_AND_BACK, is_wireframe ? GL_LINE : GL_FILL);
 
         shader_bind(shader);
 
