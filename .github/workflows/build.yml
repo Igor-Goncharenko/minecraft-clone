@@ -16,6 +16,4 @@ jobs:
           submodules: true
           fetch-depth: '0'
       - name: Build and Run
-      - uses: actions/checkout@v4
-      - name: make run
         run: make run
