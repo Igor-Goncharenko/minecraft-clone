@@ -11,6 +11,7 @@
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
 
 int scr_width = 800, scr_height = 600;
+float scr_xoffset = 0.0f, scr_yoffset = 0.0f;
 
 static void error_callback(int error, const char *description) {
     fprintf(stderr, "GLFW ERROR %d: %s\n", error, description);
@@ -26,6 +27,12 @@ static void framebuffer_size_cb(GLFWwindow *window, int width, int height) {
 static void process_input(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
+}
+
+static void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
+    scr_xoffset = xpos - scr_width / 2.0f;
+    scr_yoffset = ypos - scr_height / 2.0f;
+    glfwSetCursorPos(window, scr_width / 2.0, scr_height / 2.0);
 }
 
 int main(void) {
@@ -52,6 +59,7 @@ int main(void) {
 
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_cb);
+    glfwSetCursorPosCallback(window, mouse_callback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         fprintf(stderr, "GLAD ERROR: cannot load glad.\n");
@@ -100,13 +108,14 @@ int main(void) {
 
     mat4 model;
     glm_mat4_identity(model);
-    vec3 axis = {1.0f, 0.0f, 0.0f};
-    glm_rotate(model, glm_rad(30.0f), axis);
 
     while (!glfwWindowShouldClose(window)) {
         process_input(window);
-        camera_process_input(&cam, window);
+        camera_process_input(&cam, window, scr_xoffset, scr_yoffset);
         camera_update(&cam, scr_width, scr_height);
+
+        scr_xoffset = 0.0f;
+        scr_yoffset = 0.0f;
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
