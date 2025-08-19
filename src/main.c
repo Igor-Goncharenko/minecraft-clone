@@ -159,6 +159,9 @@ int main(void) {
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CW);
 
     mat4 model;
     glm_mat4_identity(model);
