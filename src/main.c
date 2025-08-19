@@ -142,11 +142,23 @@ int main(void) {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glBindVertexArray(0);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // glPolygonMode(GL_FRONT_AND_BACK, 1 ? GL_LINE : GL_FILL);
+
+    shader_bind(shader);
+    shader_uniform_3_floats(shader, "dirLight.direction", -0.2f, -1.0f, -0.3f);
+    shader_uniform_3_floats(shader, "dirLight.ambient", 0.1f, 0.1f, 0.1f);
+    shader_uniform_3_floats(shader, "dirLight.diffuse", 0.7f, 0.7f, 0.7f);
+    shader_uniform_3_floats(shader, "dirLight.specular", 0.9f, 0.9f, 0.9f);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
 
     mat4 model;
     glm_mat4_identity(model);
@@ -160,13 +172,15 @@ int main(void) {
         scr_yoffset = 0.0f;
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader_bind(shader);
 
         shader_uniform_mat4(shader, "model", model);
         shader_uniform_mat4(shader, "view", cam.view);
         shader_uniform_mat4(shader, "projection", cam.proj);
+
+        shader_uniform_vec3(shader, "viewPos", cam.pos);
 
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);

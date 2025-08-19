@@ -84,3 +84,11 @@ void shader_bind(const shader_t shader) {
 void shader_uniform_mat4(const shader_t shader_id, const char *name, const mat4 m) {
     glUniformMatrix4fv(glGetUniformLocation(shader_id, name), 1, GL_FALSE, (const float *)m);
 }
+
+void shader_uniform_vec3(GLuint shader_id, const char *name, vec3 v3) {
+    glUniform3fv(glGetUniformLocation(shader_id, name), 1, v3);
+}
+
+void shader_uniform_3_floats(GLuint shader_id, const char *name, float x, float y, float z) {
+    glUniform3f(glGetUniformLocation(shader_id, name), x, y, z);
+}
