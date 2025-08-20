@@ -8,11 +8,11 @@
 #define WINDOW_START_WIDTH 800
 #define WINDOW_START_HEIGHT 600
 
-static void error_callback(int error, const char *description) {
+static void _glfw_error_cb(int error, const char *description) {
     fprintf(stderr, "GLFW ERROR %d: %s\n", error, description);
 }
 
-static void framebuffer_size_cb(GLFWwindow *window, int width, int height) {
+static void _glfw_framebuffer_size_cb(GLFWwindow *window, int width, int height) {
     UNUSED(window);
 
     struct WindowState *state = glfwGetWindowUserPointer(window);
@@ -23,7 +23,7 @@ static void framebuffer_size_cb(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-static void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
+static void _glfw_mouse_cb(GLFWwindow *window, double xpos, double ypos) {
     struct WindowState *state = glfwGetWindowUserPointer(window);
 
     state->mouse_xoffset = xpos - state->width / 2.0f;
@@ -32,7 +32,7 @@ static void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
     glfwSetCursorPos(window, state->width / 2.0f, state->height / 2.0f);
 }
 
-static void window_state_base_init(struct WindowState *state) {
+static void _window_state_base_init(struct WindowState *state) {
     memset(state, 0, sizeof(struct WindowState));
 
     state->width = WINDOW_START_WIDTH;
@@ -41,7 +41,7 @@ static void window_state_base_init(struct WindowState *state) {
     state->mouse_yoffset = 0.0f;
 }
 
-static void _key_callback(GLFWwindow *handle, int key, int scancode, int action, int mods) {
+static void _glfw_key_cb(GLFWwindow *handle, int key, int scancode, int action, int mods) {
     UNUSED(scancode);
     UNUSED(mods);
 
@@ -69,7 +69,7 @@ static void _key_callback(GLFWwindow *handle, int key, int scancode, int action,
 }
 
 int glfw_window_init(GLFWwindow **handle, struct WindowState *state) {
-    glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(_glfw_error_cb);
 
     if (!glfwInit()) {
         fprintf(stderr, "Failed to initialize glfw.\n");
@@ -88,9 +88,9 @@ int glfw_window_init(GLFWwindow **handle, struct WindowState *state) {
     }
 
     glfwMakeContextCurrent(*handle);
-    glfwSetFramebufferSizeCallback(*handle, framebuffer_size_cb);
-    glfwSetCursorPosCallback(*handle, mouse_callback);
-    glfwSetKeyCallback(*handle, _key_callback);
+    glfwSetFramebufferSizeCallback(*handle, _glfw_framebuffer_size_cb);
+    glfwSetCursorPosCallback(*handle, _glfw_mouse_cb);
+    glfwSetKeyCallback(*handle, _glfw_key_cb);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         fprintf(stderr, "GLAD ERROR: cannot load glad.\n");
@@ -100,7 +100,7 @@ int glfw_window_init(GLFWwindow **handle, struct WindowState *state) {
 
     glfwSwapInterval(1);
 
-    window_state_base_init(state);
+    _window_state_base_init(state);
     glfwSetWindowUserPointer(*handle, state);
 
     return 1;
