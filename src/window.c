@@ -5,8 +5,8 @@
 
 #define UNUSED(x) (void)(x)
 
-int scr_width = 800, scr_height = 600;
-float scr_xoffset = 0.0f, scr_yoffset = 0.0f;
+#define WINDOW_START_WIDTH 800
+#define WINDOW_START_HEIGHT 600
 
 static void error_callback(int error, const char *description) {
     fprintf(stderr, "GLFW ERROR %d: %s\n", error, description);
@@ -14,18 +14,34 @@ static void error_callback(int error, const char *description) {
 
 static void framebuffer_size_cb(GLFWwindow *window, int width, int height) {
     UNUSED(window);
-    scr_width = width;
-    scr_height = height;
+
+    struct WindowState *state = glfwGetWindowUserPointer(window);
+
+    state->width = width;
+    state->height = height;
+
     glViewport(0, 0, width, height);
 }
 
 static void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
-    scr_xoffset = xpos - scr_width / 2.0f;
-    scr_yoffset = ypos - scr_height / 2.0f;
-    glfwSetCursorPos(window, scr_width / 2.0, scr_height / 2.0);
+    struct WindowState *state = glfwGetWindowUserPointer(window);
+
+    state->mouse_xoffset = xpos - state->width / 2.0f;
+    state->mouse_yoffset = ypos - state->height / 2.0f;
+
+    glfwSetCursorPos(window, state->width / 2.0f, state->height / 2.0f);
 }
 
-int glfw_window_init(GLFWwindow **handle) {
+static void window_state_base_init(struct WindowState *state) {
+    state->width = WINDOW_START_WIDTH;
+    state->height = WINDOW_START_HEIGHT;
+    state->mouse_xoffset = 0.0f;
+    state->mouse_yoffset = 0.0f;
+    state->is_wireframe = false;
+    state->is_wireframe_prev = true;
+}
+
+int glfw_window_init(GLFWwindow **handle, struct WindowState *state) {
     glfwSetErrorCallback(error_callback);
 
     if (!glfwInit()) {
@@ -36,7 +52,7 @@ int glfw_window_init(GLFWwindow **handle) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
-    *handle = glfwCreateWindow(800, 600, "Square", NULL, NULL);
+    *handle = glfwCreateWindow(WINDOW_START_WIDTH, WINDOW_START_HEIGHT, "Square", NULL, NULL);
 
     if (!(*handle)) {
         fprintf(stderr, "Failed to create glfw window.\n");
@@ -55,6 +71,9 @@ int glfw_window_init(GLFWwindow **handle) {
     }
 
     glfwSwapInterval(1);
+
+    window_state_base_init(state);
+    glfwSetWindowUserPointer(*handle, state);
 
     return 1;
 }

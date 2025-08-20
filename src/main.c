@@ -10,23 +10,24 @@
 #define VERTEX_SHADER PROJECT_ROOT "/shaders/basic.vs"
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
 
-bool is_wireframe = false;
-bool is_wireframe_prev = true;
-
 static void process_input(GLFWwindow *window) {
+    struct WindowState *state = glfwGetWindowUserPointer(window);
+
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
-    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS && is_wireframe == is_wireframe_prev)
-        is_wireframe = !is_wireframe;
+    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS &&
+        state->is_wireframe == state->is_wireframe_prev)
+        state->is_wireframe = !state->is_wireframe;
     else if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_RELEASE)
-        is_wireframe_prev = is_wireframe;
+        state->is_wireframe_prev = state->is_wireframe;
 }
 
 int main(void) {
     GLFWwindow *window = NULL;
+    struct WindowState state = {0};
     struct Camera cam;
 
-    if (!glfw_window_init(&window)) {
+    if (!glfw_window_init(&window, &state)) {
         fprintf(stderr, "Failed to initialize glfw window.\n");
         return EXIT_FAILURE;
     }
@@ -86,7 +87,7 @@ int main(void) {
     };
     // clang-format on
 
-    camera_init(&cam, scr_width, scr_height);
+    camera_init(&cam, state.width, state.height);
 
     unsigned VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
@@ -128,16 +129,16 @@ int main(void) {
 
     while (!glfwWindowShouldClose(window)) {
         process_input(window);
-        camera_process_input(&cam, window, scr_xoffset, scr_yoffset);
-        camera_update(&cam, scr_width, scr_height);
+        camera_process_input(&cam, window, state.mouse_xoffset, state.mouse_yoffset);
+        camera_update(&cam, state.width, state.height);
 
-        scr_xoffset = 0.0f;
-        scr_yoffset = 0.0f;
+        state.mouse_xoffset = 0.0f;
+        state.mouse_yoffset = 0.0f;
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glPolygonMode(GL_FRONT_AND_BACK, is_wireframe ? GL_LINE : GL_FILL);
+        glPolygonMode(GL_FRONT_AND_BACK, state.is_wireframe ? GL_LINE : GL_FILL);
 
         shader_bind(shader);
 

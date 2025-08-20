@@ -1,13 +1,16 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+#include <stdbool.h>
+
 #include "gfx.h"
 
-int glfw_window_init(GLFWwindow **handle);
+struct WindowState {
+    int width, height;
+    float mouse_xoffset, mouse_yoffset;
+    bool is_wireframe, is_wireframe_prev;
+};
 
-extern int scr_width;
-extern int scr_height;
-extern float scr_xoffset;
-extern float scr_yoffset;
+int glfw_window_init(GLFWwindow **handle, struct WindowState *state);
 
 #endif /* WINDOW_H */
