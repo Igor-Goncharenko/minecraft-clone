@@ -7,11 +7,6 @@
 #include "renderer.h"
 #include "window.h"
 
-static void process_input(GLFWwindow *window) {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GL_TRUE);
-}
-
 int main(void) {
     GLFWwindow *window = NULL;
     struct WindowState state = {0};
@@ -27,8 +22,12 @@ int main(void) {
     renderer_init(&renderer);
 
     while (!glfwWindowShouldClose(window)) {
-        process_input(window);
-        camera_process_input(&cam, window, state.mouse_xoffset, state.mouse_yoffset);
+        if (state.keys[GLFW_KEY_ESCAPE].down) {
+            glfwSetWindowShouldClose(window, GL_TRUE);
+            break;
+        }
+
+        camera_process_input(&cam, &state);
         camera_update(&cam, state.width, state.height);
 
         state.mouse_xoffset = 0.0f;

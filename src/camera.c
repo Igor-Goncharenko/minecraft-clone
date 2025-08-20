@@ -2,7 +2,7 @@
 
 #include <cglm/cglm.h>
 
-#include "gfx.h"
+#include "window.h"
 
 static void _update_camera_direction(struct Camera *cam) {
     if (cam->pitch > 89.0f)
@@ -46,25 +46,24 @@ void camera_init(struct Camera *cam, const int scr_width, const int scr_height) 
     camera_update(cam, scr_width, scr_height);
 }
 
-void camera_process_input(struct Camera *cam, GLFWwindow *window, const float xoffset,
-                          const float yoffset) {
+void camera_process_input(struct Camera *cam, const struct WindowState *state) {
     // keyboard input
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    if (state->keys[GLFW_KEY_W].down) {
         glm_vec3_muladds(cam->front, cam->speed, cam->pos);
     }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+    if (state->keys[GLFW_KEY_S].down) {
         glm_vec3_muladds(cam->front, -cam->speed, cam->pos);
     }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+    if (state->keys[GLFW_KEY_A].down) {
         glm_vec3_muladds(cam->right, cam->speed, cam->pos);
     }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+    if (state->keys[GLFW_KEY_D].down) {
         glm_vec3_muladds(cam->right, -cam->speed, cam->pos);
     }
 
     // mouse input
-    cam->yaw += xoffset * cam->sensivity;
-    cam->pitch -= yoffset * cam->sensivity;
+    cam->yaw += state->mouse_xoffset * cam->sensivity;
+    cam->pitch -= state->mouse_yoffset * cam->sensivity;
 
     _update_camera_direction(cam);
 }
