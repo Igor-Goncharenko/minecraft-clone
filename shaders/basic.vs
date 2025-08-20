@@ -6,11 +6,16 @@ layout (location = 1) in vec3 aNormal;
 out vec3 Normal;
 out vec3 FragPos;
 
-uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
 void main() {
+    mat4 model = mat4(
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f);
+
     FragPos = vec3(model * vec4(aPos, 1.0f));
     Normal = aNormal;
 
