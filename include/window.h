@@ -5,10 +5,15 @@
 
 #include "gfx.h"
 
+struct Key {
+    bool down, prev, toggle;
+};
+
 struct WindowState {
     int width, height;
     float mouse_xoffset, mouse_yoffset;
-    bool is_wireframe, is_wireframe_prev;
+
+    struct Key keys[GLFW_KEY_LAST + 1];
 };
 
 int glfw_window_init(GLFWwindow **handle, struct WindowState *state);

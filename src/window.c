@@ -1,7 +1,7 @@
 #include "window.h"
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 
 #define UNUSED(x) (void)(x)
 
@@ -33,12 +33,39 @@ static void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
 }
 
 static void window_state_base_init(struct WindowState *state) {
+    memset(state, 0, sizeof(struct WindowState));
+
     state->width = WINDOW_START_WIDTH;
     state->height = WINDOW_START_HEIGHT;
     state->mouse_xoffset = 0.0f;
     state->mouse_yoffset = 0.0f;
-    state->is_wireframe = false;
-    state->is_wireframe_prev = true;
+}
+
+static void _key_callback(GLFWwindow *handle, int key, int scancode, int action, int mods) {
+    UNUSED(scancode);
+    UNUSED(mods);
+
+    struct WindowState *state = glfwGetWindowUserPointer(handle);
+
+    if (key < 0) return;
+
+    switch (action) {
+        case GLFW_PRESS:
+            state->keys[key].down = true;
+            break;
+        case GLFW_RELEASE:
+            state->keys[key].down = false;
+            break;
+        case GLFW_REPEAT:
+            break;
+        default:
+            fprintf(stderr, "%s: Unprocessed keyboard key action: %d.\n", __FUNCTION__, action);
+            break;
+    }
+
+    if (state->keys[key].down && !state->keys[key].prev)
+        state->keys[key].toggle = !state->keys[key].toggle;
+    state->keys[key].prev = state->keys[key].down;
 }
 
 int glfw_window_init(GLFWwindow **handle, struct WindowState *state) {
@@ -63,6 +90,7 @@ int glfw_window_init(GLFWwindow **handle, struct WindowState *state) {
     glfwMakeContextCurrent(*handle);
     glfwSetFramebufferSizeCallback(*handle, framebuffer_size_cb);
     glfwSetCursorPosCallback(*handle, mouse_callback);
+    glfwSetKeyCallback(*handle, _key_callback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         fprintf(stderr, "GLAD ERROR: cannot load glad.\n");

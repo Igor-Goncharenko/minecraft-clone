@@ -8,15 +8,8 @@
 #include "window.h"
 
 static void process_input(GLFWwindow *window) {
-    struct WindowState *state = glfwGetWindowUserPointer(window);
-
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
-    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS &&
-        state->is_wireframe == state->is_wireframe_prev)
-        state->is_wireframe = !state->is_wireframe;
-    else if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_RELEASE)
-        state->is_wireframe_prev = state->is_wireframe;
 }
 
 int main(void) {
@@ -41,7 +34,7 @@ int main(void) {
         state.mouse_xoffset = 0.0f;
         state.mouse_yoffset = 0.0f;
 
-        renderer_render(&renderer, &cam, state.is_wireframe);
+        renderer_render(&renderer, &cam, state.keys[GLFW_KEY_Y].toggle);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
