@@ -5,27 +5,13 @@
 #include "camera.h"
 #include "gfx.h"
 #include "shader.h"
-
-#define UNUSED(x) (void)(x)
+#include "window.h"
 
 #define VERTEX_SHADER PROJECT_ROOT "/shaders/basic.vs"
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
 
-int scr_width = 800, scr_height = 600;
-float scr_xoffset = 0.0f, scr_yoffset = 0.0f;
 bool is_wireframe = false;
 bool is_wireframe_prev = true;
-
-static void error_callback(int error, const char *description) {
-    fprintf(stderr, "GLFW ERROR %d: %s\n", error, description);
-}
-
-static void framebuffer_size_cb(GLFWwindow *window, int width, int height) {
-    UNUSED(window);
-    scr_width = width;
-    scr_height = height;
-    glViewport(0, 0, width, height);
-}
 
 static void process_input(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -36,45 +22,14 @@ static void process_input(GLFWwindow *window) {
         is_wireframe_prev = is_wireframe;
 }
 
-static void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
-    scr_xoffset = xpos - scr_width / 2.0f;
-    scr_yoffset = ypos - scr_height / 2.0f;
-    glfwSetCursorPos(window, scr_width / 2.0, scr_height / 2.0);
-}
-
 int main(void) {
     GLFWwindow *window = NULL;
     struct Camera cam;
 
-    glfwSetErrorCallback(error_callback);
-
-    if (!glfwInit()) {
-        fprintf(stderr, "Failed to initialize glfw.");
+    if (!glfw_window_init(&window)) {
+        fprintf(stderr, "Failed to initialize glfw window.\n");
         return EXIT_FAILURE;
     }
-
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-
-    window = glfwCreateWindow(800, 600, "Square", NULL, NULL);
-
-    if (!window) {
-        fprintf(stderr, "Failed to create glfw window.");
-        glfwTerminate();
-        return EXIT_FAILURE;
-    }
-
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_cb);
-    glfwSetCursorPosCallback(window, mouse_callback);
-
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        fprintf(stderr, "GLAD ERROR: cannot load glad.\n");
-        glfwTerminate();
-        return EXIT_FAILURE;
-    }
-
-    glfwSwapInterval(1);
 
     shader_t shader = shader_create(VERTEX_SHADER, FRAGMENT_SHADER);
 
