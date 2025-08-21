@@ -19,16 +19,7 @@ static void _update_camera_direction(struct Camera *cam) {
     glm_vec3_cross(cam->front, cam->right, cam->up);
 }
 
-void camera_update(struct Camera *cam, const int scr_width, const int scr_height) {
-    vec3 center;
-    glm_vec3_add(cam->pos, cam->front, center);
-    glm_lookat(cam->pos, center, cam->up, cam->view);
-
-    float aspect = (float)scr_width / (float)scr_height;
-    glm_perspective(glm_rad(45.0f), aspect, 0.1f, 100.0f, cam->proj);
-}
-
-void camera_init(struct Camera *cam, const int scr_width, const int scr_height) {
+static void _camera_reset_position(struct Camera *cam) {
     cam->pos[0] = 0.0f;
     cam->pos[1] = 0.0f;
     cam->pos[2] = 5.0f;
@@ -37,8 +28,21 @@ void camera_init(struct Camera *cam, const int scr_width, const int scr_height) 
     cam->yaw = -90.0f;
 
     _update_camera_direction(cam);
+}
 
-    glm_cross(cam->front, cam->up, cam->right);
+void camera_update(struct Camera *cam, const int scr_width, const int scr_height) {
+    vec3 center;
+    glm_vec3_add(cam->pos, cam->front, center);
+    glm_lookat(cam->pos, center, cam->up, cam->view);
+
+    float aspect = (float)scr_width / (float)scr_height;
+    glm_perspective(glm_rad(45.0f), aspect, 0.1f, 100.0f, cam->proj);
+
+    _update_camera_direction(cam);
+}
+
+void camera_init(struct Camera *cam, const int scr_width, const int scr_height) {
+    _camera_reset_position(cam);
 
     cam->speed = CAM_DEFAULT_SPEED;
     cam->sensivity = CAM_DEFAULT_SENSIVITY;
@@ -60,10 +64,11 @@ void camera_process_input(struct Camera *cam, const struct WindowState *state) {
     if (state->keys[GLFW_KEY_D].down) {
         glm_vec3_muladds(cam->right, -cam->speed, cam->pos);
     }
+    if (state->keys[GLFW_KEY_R].down) {
+        _camera_reset_position(cam);
+    }
 
     // mouse input
     cam->yaw += state->mouse.xoffset * cam->sensivity;
     cam->pitch -= state->mouse.yoffset * cam->sensivity;
-
-    _update_camera_direction(cam);
 }
