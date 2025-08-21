@@ -26,12 +26,10 @@ int main(void) {
             glfwSetWindowShouldClose(window, GL_TRUE);
             break;
         }
+        glfw_window_state_update(&state);
 
         camera_process_input(&cam, &state);
         camera_update(&cam, state.width, state.height);
-
-        state.mouse_xoffset = 0.0f;
-        state.mouse_yoffset = 0.0f;
 
         renderer_render(&renderer, &cam, state.keys[GLFW_KEY_Y].toggle);
 

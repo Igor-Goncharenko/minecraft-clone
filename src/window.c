@@ -20,16 +20,10 @@ static void _glfw_framebuffer_size_cb(GLFWwindow *window, int width, int height)
     state->width = width;
     state->height = height;
 
+    state->half_width = width / 2.0f;
+    state->half_height = height / 2.0f;
+
     glViewport(0, 0, width, height);
-}
-
-static void _glfw_mouse_cb(GLFWwindow *window, double xpos, double ypos) {
-    struct WindowState *state = glfwGetWindowUserPointer(window);
-
-    state->mouse_xoffset = xpos - state->width / 2.0f;
-    state->mouse_yoffset = ypos - state->height / 2.0f;
-
-    glfwSetCursorPos(window, state->width / 2.0f, state->height / 2.0f);
 }
 
 static void _window_state_base_init(struct WindowState *state) {
@@ -37,17 +31,25 @@ static void _window_state_base_init(struct WindowState *state) {
 
     state->width = WINDOW_START_WIDTH;
     state->height = WINDOW_START_HEIGHT;
-    state->mouse_xoffset = 0.0f;
-    state->mouse_yoffset = 0.0f;
+
+    state->half_width = WINDOW_START_WIDTH / 2.0f;
+    state->half_height = WINDOW_START_HEIGHT / 2.0f;
+
+    state->mouse.xpos = state->half_width;
+    state->mouse.ypos = state->half_height;
+    state->mouse.last_xpos = state->half_width;
+    state->mouse.last_ypos = state->half_height;
+
+    state->mouse.grabbed = true;
 }
 
 static void _glfw_key_cb(GLFWwindow *handle, int key, int scancode, int action, int mods) {
     UNUSED(scancode);
     UNUSED(mods);
 
-    struct WindowState *state = glfwGetWindowUserPointer(handle);
-
     if (key < 0) return;
+
+    struct WindowState *state = glfwGetWindowUserPointer(handle);
 
     switch (action) {
         case GLFW_PRESS:
@@ -66,6 +68,19 @@ static void _glfw_key_cb(GLFWwindow *handle, int key, int scancode, int action, 
     if (state->keys[key].down && !state->keys[key].prev)
         state->keys[key].toggle = !state->keys[key].toggle;
     state->keys[key].prev = state->keys[key].down;
+}
+
+static void _glfw_mouse_cursor_cb(GLFWwindow *handle, double xpos, double ypos) {
+    struct WindowState *state = glfwGetWindowUserPointer(handle);
+
+    if (state->mouse.grabbed) {
+        glfwSetCursorPos(handle, state->half_width, state->half_height);
+        state->mouse.last_xpos = state->mouse.xpos;
+        state->mouse.last_ypos = state->mouse.ypos;
+    }
+
+    state->mouse.xpos = xpos;
+    state->mouse.ypos = ypos;
 }
 
 int glfw_window_init(GLFWwindow **handle, struct WindowState *state) {
@@ -89,7 +104,7 @@ int glfw_window_init(GLFWwindow **handle, struct WindowState *state) {
 
     glfwMakeContextCurrent(*handle);
     glfwSetFramebufferSizeCallback(*handle, _glfw_framebuffer_size_cb);
-    glfwSetCursorPosCallback(*handle, _glfw_mouse_cb);
+    glfwSetCursorPosCallback(*handle, _glfw_mouse_cursor_cb);
     glfwSetKeyCallback(*handle, _glfw_key_cb);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -103,5 +118,16 @@ int glfw_window_init(GLFWwindow **handle, struct WindowState *state) {
     _window_state_base_init(state);
     glfwSetWindowUserPointer(*handle, state);
 
+    glfwSetInputMode(*handle, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+
     return 1;
+}
+
+void glfw_window_state_update(struct WindowState *state) {
+    if (state->mouse.grabbed) {
+        state->mouse.xoffset = state->mouse.xpos - state->mouse.last_xpos;
+        state->mouse.yoffset = state->mouse.ypos - state->mouse.last_ypos;
+        state->mouse.xpos = state->mouse.last_xpos;
+        state->mouse.ypos = state->mouse.last_ypos;
+    }
 }

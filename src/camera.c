@@ -62,8 +62,8 @@ void camera_process_input(struct Camera *cam, const struct WindowState *state) {
     }
 
     // mouse input
-    cam->yaw += state->mouse_xoffset * cam->sensivity;
-    cam->pitch -= state->mouse_yoffset * cam->sensivity;
+    cam->yaw += state->mouse.xoffset * cam->sensivity;
+    cam->pitch -= state->mouse.yoffset * cam->sensivity;
 
     _update_camera_direction(cam);
 }
