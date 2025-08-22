@@ -5,8 +5,13 @@
 #include "camera.h"
 #include "shader.h"
 
+#ifdef MINECRAFT_DEBUG
 #define VERTEX_SHADER PROJECT_ROOT "/shaders/basic.vs"
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
+#else
+#define VERTEX_SHADER "shaders/basic.vs"
+#define FRAGMENT_SHADER "shaders/basic.fs"
+#endif
 
 // clang-format off
 static const float CUBE_VERTICES[] = {

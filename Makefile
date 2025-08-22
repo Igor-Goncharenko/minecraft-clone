@@ -4,9 +4,9 @@ INC_DIR = include
 BUILD_DIR = build
 OBJ_DIR = $(BUILD_DIR)/obj
 
-PROJECT_ROOT := $(shell pwd)
+SHADERS_DIR = shaders
 
-PROJECT_NAME= minecraft-clone
+PROJECT_NAME = minecraft-clone
 VERSION = 0.0.1
 
 CGLM_DIR = $(LIB_DIR)/cglm
@@ -19,13 +19,12 @@ GLFW_LIB = $(GLFW_BUILD_DIR)/src/libglfw3.a
 
 LIBS = $(CGLM_LIB) $(GLFW_LIB)
 
-DEBUG_EXEC = $(BUILD_DIR)/debug-$(VERSION)/$(PROJECT_NAME)-$(VERSION)-debug.out
+DEBUG_EXEC = $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-debug.out
 RELEASE_EXEC = $(BUILD_DIR)/release-$(VERSION)/$(PROJECT_NAME)-$(VERSION).out
 
 CC = gcc
 CFLAGS = -std=c11 -Wall -Wextra -Werror
 CFLAGS += -Iinclude -I$(LIB_DIR)/glad/include -I$(GLFW_DIR)/include -I$(CGLM_DIR)/include
-CFLAGS += -DPROJECT_ROOT=\"$(PROJECT_ROOT)\"
 LDFLAGS = -lm -ldl -lpthread $(LIBS)
 
 SRC = $(wildcard $(SRC_DIR)/*.c)
@@ -35,7 +34,7 @@ OBJ = $(SRC:%.c=$(OBJ_DIR)/%.o)
 
 .PHONY: all release debug clean clean_obj
 
-all: release
+all: debug
 
 run: release
 	@echo "Starting release version..."
@@ -44,7 +43,7 @@ run: release
 release: CFLAGS += -O3
 release: clean_obj $(RELEASE_EXEC)
 
-debug: CFLAGS += -O0 -g -DMC_DEBUG
+debug: CFLAGS += -O0 -g -DMINECRAFT_DEBUG -DPROJECT_ROOT=\"$(shell pwd)\"
 debug: clean_obj $(DEBUG_EXEC)
 
 $(CGLM_LIB):
@@ -63,6 +62,7 @@ $(DEBUG_EXEC): $(LIBS) $(OBJ)
 
 $(RELEASE_EXEC): $(LIBS) $(OBJ)
 	@mkdir -p $(@D)
+	@cp -r $(SHADERS_DIR) $(@D)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: %.c
