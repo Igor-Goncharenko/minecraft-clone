@@ -6,6 +6,7 @@
 #include "window.h"
 
 #define CAM_DEFAULT_SPEED 0.05f
+#define CAM_SPEED_MULTIPIER 4
 #define CAM_DEFAULT_SENSIVITY 0.5f
 
 struct Camera {

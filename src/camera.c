@@ -64,6 +64,13 @@ void camera_process_input(struct Camera *cam, const struct WindowState *state) {
     if (state->keys[GLFW_KEY_D].down) {
         glm_vec3_muladds(cam->right, -cam->speed, cam->pos);
     }
+
+    if (state->keys[GLFW_KEY_LEFT_SHIFT].down) {
+        cam->speed = CAM_DEFAULT_SPEED * CAM_SPEED_MULTIPIER;
+    } else {
+        cam->speed = CAM_DEFAULT_SPEED;
+    }
+
     if (state->keys[GLFW_KEY_R].down) {
         _camera_reset_position(cam);
     }
