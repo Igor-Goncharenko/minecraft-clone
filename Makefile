@@ -33,17 +33,9 @@ SRC += $(LIB_DIR)/glad/src/glad.c
 
 OBJ = $(SRC:%.c=$(OBJ_DIR)/%.o)
 
-.PHONY: all release debug valgrind gdb clean
+.PHONY: all release debug clean clean_obj
 
 all: release
-
-gdb: debug
-	@echo "Starting GDB..."
-	@gdb -tui ./$(DEBUG_EXEC)
-
-valgrind: debug
-	@echo "Starting valgrind..."
-	@valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./$(DEBUG_EXEC)
 
 run: release
 	@echo "Starting release version..."
