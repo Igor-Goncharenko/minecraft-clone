@@ -106,8 +106,8 @@ static void _world_render(const struct Renderer *renderer, const struct Chunk *c
                           const struct Camera *cam) {
     shader_bind(renderer->shader);
 
-    int center_chunk_x = (int)(cam->pos[0] / 16.0f);
-    int center_chunk_y = (int)(cam->pos[2] / 16.0f);
+    int center_chunk_x = (int)(cam->pos[0] / 16.0f) + ((cam->pos[0] < 0) ? -1 : 0);
+    int center_chunk_y = (int)(cam->pos[2] / 16.0f) + ((cam->pos[2] < 0) ? -1 : 0);
 
     shader_uniform_int(renderer->shader, "chunk_z", 0);
 
