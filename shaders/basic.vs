@@ -7,6 +7,10 @@ out vec3 Normal;
 out vec3 FragPos;
 
 uniform int block_index;
+uniform int chunk_x;
+uniform int chunk_y;
+uniform int chunk_z;
+
 uniform mat4 view;
 uniform mat4 projection;
 
@@ -21,7 +25,10 @@ void main() {
             0.0f, 0.0f, 1.0f, 0.0f,
             0.0f, 0.0f, 0.0f, 1.0f);
 
-    vec3 final_pos = aPos + vec3(block_x, block_z, block_y);
+    vec3 block_in_chunk_coord = vec3(block_x, block_z, block_y);
+    vec3 chunk_coord = vec3(chunk_x, chunk_z, chunk_y) * 16.0f;
+
+    vec3 final_pos = aPos + block_in_chunk_coord + chunk_coord;
     FragPos = vec3(model * vec4(final_pos, 1.0f));
     Normal = aNormal;
 

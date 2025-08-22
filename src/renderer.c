@@ -9,6 +9,8 @@
 #define VERTEX_SHADER PROJECT_ROOT "/shaders/basic.vs"
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
 
+#define RENDER_DISTATCE 2  // in chunks
+
 // clang-format off
 static const float CUBE_VERTICES[] = {
     /* positions        * normals         */
@@ -88,6 +90,39 @@ static void _vertex_buffer_init(struct VertexBuffer *buff, const float *vertices
     glBindVertexArray(0);
 }
 
+static void _chunk_render(const struct Renderer *renderer, const struct Chunk *chunk) {
+    glBindVertexArray(renderer->cube.vao);
+
+    for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE; i++) {
+        if (chunk->data[i]) {
+            shader_uniform_int(renderer->shader, "block_index", i);
+            glDrawElements(GL_TRIANGLES, renderer->total_points, GL_UNSIGNED_INT, 0);
+        }
+    }
+    glBindVertexArray(0);
+}
+
+static void _world_render(const struct Renderer *renderer, const struct Chunk *chunk,
+                          const struct Camera *cam) {
+    shader_bind(renderer->shader);
+
+    int center_chunk_x = (int)(cam->pos[0] / 16.0f);
+    int center_chunk_y = (int)(cam->pos[2] / 16.0f);
+
+    shader_uniform_int(renderer->shader, "chunk_z", 0);
+
+    for (int chunk_x = center_chunk_x - RENDER_DISTATCE;
+         chunk_x <= center_chunk_x + RENDER_DISTATCE; chunk_x++) {
+        for (int chunk_y = center_chunk_y - RENDER_DISTATCE;
+             chunk_y <= center_chunk_y + RENDER_DISTATCE; chunk_y++) {
+            shader_uniform_int(renderer->shader, "chunk_x", chunk_x);
+            shader_uniform_int(renderer->shader, "chunk_y", chunk_y);
+
+            _chunk_render(renderer, chunk);
+        }
+    }
+}
+
 int renderer_init(struct Renderer *renderer) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -115,25 +150,14 @@ void renderer_render(const struct Renderer *renderer, const struct Camera *cam,
                      const struct Chunk *chunk, bool is_wireframe) {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     glPolygonMode(GL_FRONT_AND_BACK, is_wireframe ? GL_LINE : GL_FILL);
 
     shader_bind(renderer->shader);
-
     shader_uniform_mat4(renderer->shader, "view", cam->view);
     shader_uniform_mat4(renderer->shader, "projection", cam->proj);
-
     shader_uniform_vec3(renderer->shader, "viewPos", cam->pos);
 
-    glBindVertexArray(renderer->cube.vao);
-
-    for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE; i++) {
-        if (chunk->data[i]) {
-            shader_uniform_int(renderer->shader, "block_index", i);
-            glDrawElements(GL_TRIANGLES, renderer->total_points, GL_UNSIGNED_INT, 0);
-        }
-    }
-    glBindVertexArray(0);
+    _world_render(renderer, chunk, cam);
 }
 
 void renderer_destroy(struct Renderer *renderer) {
