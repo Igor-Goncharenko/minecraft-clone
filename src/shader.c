@@ -93,3 +93,7 @@ void shader_uniform_3_floats(const shader_t shader_id, const char *name, const f
                              const float y, const float z) {
     glUniform3f(glGetUniformLocation(shader_id, name), x, y, z);
 }
+
+void shader_uniform_int(const shader_t shader_id, const char *name, const int x) {
+    glUniform1i(glGetUniformLocation(shader_id, name), x);
+}

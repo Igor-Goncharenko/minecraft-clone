@@ -14,5 +14,6 @@ void shader_uniform_mat4(const shader_t shader_id, const char *name, const mat4 
 void shader_uniform_vec3(const shader_t shader_id, const char *name, const vec3 v3);
 void shader_uniform_3_floats(const shader_t shader_id, const char *name, const float x,
                              const float y, const float z);
+void shader_uniform_int(const shader_t shader_id, const char *name, const int x);
 
 #endif /* SHADER_H */

@@ -21,11 +21,11 @@ static void _update_camera_direction(struct Camera *cam) {
 
 static void _camera_reset_position(struct Camera *cam) {
     cam->pos[0] = 0.0f;
-    cam->pos[1] = 0.0f;
-    cam->pos[2] = 5.0f;
+    cam->pos[1] = 10.0f;
+    cam->pos[2] = 0.0f;
 
-    cam->pitch = 0.0f;
-    cam->yaw = -90.0f;
+    cam->pitch = -20.0f;
+    cam->yaw = 45.0f;
 
     _update_camera_direction(cam);
 }

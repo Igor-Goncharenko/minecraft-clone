@@ -4,6 +4,7 @@
 
 #include "camera.h"
 #include "shader.h"
+#include "world.h"
 
 #define VERTEX_SHADER PROJECT_ROOT "/shaders/basic.vs"
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
@@ -110,7 +111,8 @@ int renderer_init(struct Renderer *renderer) {
     return 0;
 }
 
-void renderer_render(const struct Renderer *renderer, const struct Camera *cam, bool is_wireframe) {
+void renderer_render(const struct Renderer *renderer, const struct Camera *cam,
+                     const struct Chunk *chunk, bool is_wireframe) {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -124,7 +126,13 @@ void renderer_render(const struct Renderer *renderer, const struct Camera *cam, 
     shader_uniform_vec3(renderer->shader, "viewPos", cam->pos);
 
     glBindVertexArray(renderer->cube.vao);
-    glDrawElements(GL_TRIANGLES, renderer->total_points, GL_UNSIGNED_INT, 0);
+
+    for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE; i++) {
+        if (chunk->data[i]) {
+            shader_uniform_int(renderer->shader, "block_index", i);
+            glDrawElements(GL_TRIANGLES, renderer->total_points, GL_UNSIGNED_INT, 0);
+        }
+    }
     glBindVertexArray(0);
 }
 
