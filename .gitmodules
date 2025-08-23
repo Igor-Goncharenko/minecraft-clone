@@ -4,3 +4,6 @@
 [submodule "libs/cglm"]
 	path = libs/cglm
 	url = https://github.com/recp/cglm.git
+[submodule "libs/sqlite"]
+	path = libs/sqlite
+	url = https://github.com/sqlite/sqlite.git
