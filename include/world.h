@@ -8,6 +8,7 @@
 
 #define CHUNK_SIZE 16
 #define CHUNK_VOLUME (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE)
+#define CHUNK_BYTE_SIZE (sizeof(int) * CHUNK_VOLUME)
 
 struct Chunk {
     int x, y, z;

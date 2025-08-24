@@ -13,7 +13,7 @@ int main(void) {
     struct WindowState state = {0};
     struct Camera cam;
     struct Renderer renderer;
-    struct World world;
+    struct World world = {0};
 
     if (!glfw_window_init(&window, &state)) {
         fprintf(stderr, "Failed to initialize glfw window.\n");
@@ -22,7 +22,7 @@ int main(void) {
 
     camera_init(&cam, state.width, state.height);
     renderer_init(&renderer);
-    load_world(PROJECT_ROOT "/build/world.sqlite", &world);
+    if (load_world(PROJECT_ROOT "/build/world.sqlite", &world)) goto cleanup;
 
     while (!glfwWindowShouldClose(window)) {
         if (state.keys[GLFW_KEY_ESCAPE].down) {
@@ -40,9 +40,10 @@ int main(void) {
         glfwPollEvents();
     }
 
-    close_world(&world);
+cleanup:
     renderer_destroy(&renderer);
     glfwDestroyWindow(window);
     glfwTerminate();
+    close_world(&world);
     return EXIT_SUCCESS;
 }
