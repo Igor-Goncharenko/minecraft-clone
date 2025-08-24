@@ -20,7 +20,7 @@ struct Renderer {
 
 int renderer_init(struct Renderer *renderer);
 void renderer_render(const struct Renderer *renderer, const struct Camera *cam,
-                     const struct Chunk *chunk, bool is_wireframe);
+                     const struct World *world, bool is_wireframe);
 void renderer_destroy(struct Renderer *renderer);
 
 #endif /* RENDERER_H */

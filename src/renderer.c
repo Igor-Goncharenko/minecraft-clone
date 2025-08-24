@@ -9,8 +9,6 @@
 #define VERTEX_SHADER PROJECT_ROOT "/shaders/basic.vs"
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
 
-#define RENDER_DISTATCE 2  // in chunks
-
 // clang-format off
 static const float CUBE_VERTICES[] = {
     /* positions        * normals         */
@@ -102,23 +100,18 @@ static void _chunk_render(const struct Renderer *renderer, const struct Chunk *c
     glBindVertexArray(0);
 }
 
-static void _world_render(const struct Renderer *renderer, const struct Chunk *chunk,
-                          const struct Camera *cam) {
+static void _world_render(const struct Renderer *renderer, const struct World *world) {
     shader_bind(renderer->shader);
 
-    int center_chunk_x = (int)(cam->pos[0] / 16.0f) + ((cam->pos[0] < 0) ? -1 : 0);
-    int center_chunk_y = (int)(cam->pos[2] / 16.0f) + ((cam->pos[2] < 0) ? -1 : 0);
-
-    shader_uniform_int(renderer->shader, "chunk_z", 0);
-
-    for (int chunk_x = center_chunk_x - RENDER_DISTATCE;
-         chunk_x <= center_chunk_x + RENDER_DISTATCE; chunk_x++) {
-        for (int chunk_y = center_chunk_y - RENDER_DISTATCE;
-             chunk_y <= center_chunk_y + RENDER_DISTATCE; chunk_y++) {
-            shader_uniform_int(renderer->shader, "chunk_x", chunk_x);
-            shader_uniform_int(renderer->shader, "chunk_y", chunk_y);
-
-            _chunk_render(renderer, chunk);
+    for (int x = 0; x < LOADED_SIDE; x++) {
+        shader_uniform_int(renderer->shader, "chunk_x", x);
+        for (int y = 0; y < LOADED_SIDE; y++) {
+            shader_uniform_int(renderer->shader, "chunk_y", y);
+            for (int z = 0; z < LOADED_SIDE; z++) {
+                shader_uniform_int(renderer->shader, "chunk_z", z);
+                int idx = z * LOADED_SIDE * LOADED_SIDE + y * LOADED_SIDE + x;
+                _chunk_render(renderer, &world->loaded_chunks[idx]);
+            }
         }
     }
 }
@@ -147,7 +140,7 @@ int renderer_init(struct Renderer *renderer) {
 }
 
 void renderer_render(const struct Renderer *renderer, const struct Camera *cam,
-                     const struct Chunk *chunk, bool is_wireframe) {
+                     const struct World *world, bool is_wireframe) {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, is_wireframe ? GL_LINE : GL_FILL);
@@ -157,7 +150,7 @@ void renderer_render(const struct Renderer *renderer, const struct Camera *cam,
     shader_uniform_mat4(renderer->shader, "projection", cam->proj);
     shader_uniform_vec3(renderer->shader, "viewPos", cam->pos);
 
-    _world_render(renderer, chunk, cam);
+    _world_render(renderer, world);
 }
 
 void renderer_destroy(struct Renderer *renderer) {

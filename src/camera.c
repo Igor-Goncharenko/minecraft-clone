@@ -36,7 +36,7 @@ void camera_update(struct Camera *cam, const int scr_width, const int scr_height
     glm_lookat(cam->pos, center, cam->up, cam->view);
 
     float aspect = (float)scr_width / (float)scr_height;
-    glm_perspective(glm_rad(45.0f), aspect, 0.1f, 100.0f, cam->proj);
+    glm_perspective(glm_rad(45.0f), aspect, 0.1f, 1000.0f, cam->proj);
 
     _update_camera_direction(cam);
 }

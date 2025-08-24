@@ -31,7 +31,7 @@ CC = gcc
 CFLAGS = -std=c11 -Wall -Wextra -Werror
 CFLAGS += -Iinclude -I$(LIB_DIR)/glad/include -I$(GLFW_DIR)/include -I$(CGLM_DIR)/include -I$(SQLITE_DIR)
 CFLAGS += -DPROJECT_ROOT=\"$(PROJECT_ROOT)\"
-LDFLAGS = -lm -ldl -lpthread
+LDFLAGS = -lm -ldl -lpthread $(LIBS)
 
 SRC = $(wildcard $(SRC_DIR)/*.c)
 SRC += $(LIB_DIR)/glad/src/glad.c
@@ -80,11 +80,11 @@ $(SQLITE_OBJ): $(SQLITE_LIB)
 
 $(DEBUG_EXEC): $(LIBS) $(OBJ)
 	@mkdir -p $(@D)
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(CC) -o $@ $(OBJ) $(LDFLAGS)
 
 $(RELEASE_EXEC): $(LIBS) $(OBJ)
 	@mkdir -p $(@D)
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(CC) -o $@ $(OBJ) $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(@D)

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "gfx.h"
+
 #define UNUSED(x) (void)(x)
 
 #define WINDOW_START_WIDTH 800
