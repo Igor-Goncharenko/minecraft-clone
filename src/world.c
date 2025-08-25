@@ -34,22 +34,9 @@ static void _world_chunk_gen(struct Chunk *chunk) {
     }
 }
 
-static world_error_e _world_db_open(const char *filename, sqlite3 **db) {
+static world_error_e _world_create_open_table(sqlite3 *db) {
     int rc;
     char *err_msg = NULL;
-
-    if ((rc = sqlite3_open(filename, db)) != SQLITE_OK) {
-        fprintf(stderr, "Failed to open database '%s'(%d).\n", filename, rc);
-        *db = NULL;
-        return DB_ERROR;
-    }
-
-    if ((rc = sqlite3_exec(*db, "PRAGMA journal_mode=WAL;", NULL, NULL, &err_msg)) != SQLITE_OK) {
-        fprintf(stderr, "SQL error(%d): %s\n", rc, err_msg);
-        sqlite3_free(err_msg);
-        *db = NULL;
-        return DB_ERROR;
-    }
 
     const char *sql =
         "CREATE TABLE IF NOT EXISTS chunks ("
@@ -59,14 +46,12 @@ static world_error_e _world_db_open(const char *filename, sqlite3 **db) {
         "data BLOB,"
         "PRIMARY KEY (x, y, z));";
 
-    ;
-    if ((rc = sqlite3_exec(*db, sql, NULL, NULL, &err_msg)) != SQLITE_OK) {
+    if ((rc = sqlite3_exec(db, sql, NULL, NULL, &err_msg)) != SQLITE_OK) {
         fprintf(stderr, "SQL error(%d): %s\n", rc, err_msg);
         sqlite3_free(err_msg);
-        *db = NULL;
         return DB_ERROR;
     }
-    printf("Table checked/created successfully.\n");
+    printf("World table checked/created successfully.\n");
     return WORLD_OK;
 }
 
@@ -151,12 +136,14 @@ static world_error_e _world_load_chunk(sqlite3 *db, const int x, const int y, co
     return WORLD_OK;
 }
 
-int load_world(const char *filename, struct World *world) {
+int load_world(sqlite3 *db, struct World *world) {
     world_error_e err;
     int loaded_chunks = 0, errors = 0, fatal_errors = 0;
 
-    if (_world_db_open(filename, &world->db) != WORLD_OK) {
-        fprintf(stderr, "Failed to open database from '%s'.\n", filename);
+    world->db = db;
+
+    if (_world_create_open_table(world->db) != WORLD_OK) {
+        fprintf(stderr, "Failed to open world table.\n");
         return 1;
     }
 
@@ -208,8 +195,8 @@ int load_world(const char *filename, struct World *world) {
         }
     }
 
-    printf("World loaded from '%s': %d chunks, %d errors, %d fatal errors.\n", filename,
-           loaded_chunks, errors, fatal_errors);
+    printf("World loaded from: %d chunks, %d errors, %d fatal errors.\n", loaded_chunks, errors,
+           fatal_errors);
 
     return 0;
 }
@@ -251,8 +238,6 @@ int close_world(struct World *world) {
         }
         free(world->loaded_chunks);
     }
-
-    if (world->db != NULL) sqlite3_close(world->db);
 
     printf("World saved: %d chunk, %d fatal errors.\n", saved_chunks, fatal_errors);
 

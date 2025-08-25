@@ -23,7 +23,7 @@ struct World {
     struct Chunk *loaded_chunks;
 };
 
-int load_world(const char *filename, struct World *world);
+int load_world(sqlite3 *db, struct World *world);
 int close_world(struct World *world);
 
 #endif /* WORLD_H */
