@@ -54,8 +54,10 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
-    if (db_init(DB_FILEPATH, &db) || load_world(db, &world)) goto cleanup;
-    camera_init(&cam, state.width, state.height);
+    // we must initialize camera first to get cam position to load chunks
+    if (db_init(DB_FILEPATH, &db) || camera_init(&cam, db, state.width, state.height) ||
+        load_world(db, &world))
+        goto cleanup;
     renderer_init(&renderer);
 
     while (!glfwWindowShouldClose(window)) {
@@ -79,6 +81,7 @@ cleanup:
     glfwDestroyWindow(window);
     glfwTerminate();
     close_world(&world);
+    camera_save(&cam);
     db_close(&db);
     return EXIT_SUCCESS;
 }

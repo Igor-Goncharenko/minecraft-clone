@@ -2,6 +2,7 @@
 #define CAMERA_H
 
 #include <cglm/cglm.h>
+#include <sqlite3.h>
 
 #include "window.h"
 
@@ -18,10 +19,17 @@ struct Camera {
     mat4 view, proj;
 
     float speed, sensivity;
+
+    int chunk_x;
+    int chunk_y;
+    int chunk_z;
+
+    sqlite3 *db;
 };
 
 void camera_update(struct Camera *cam, const int scr_width, const int scr_height);
-void camera_init(struct Camera *cam, const int scr_width, const int scr_height);
 void camera_process_input(struct Camera *cam, const struct WindowState *state);
+int camera_init(struct Camera *cam, sqlite3 *db, const int scr_width, const int scr_height);
+int camera_save(struct Camera *cam);
 
 #endif /* CAMERA_H */
