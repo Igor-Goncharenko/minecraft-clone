@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "camera.h"
+
 #define WORLD_GEN_FUNC(x, y) (8.0f * sin(0.125f * x) * sin(0.125f * y) + 10.0f)
 
 typedef enum {
@@ -136,11 +138,15 @@ static world_error_e _world_load_chunk(sqlite3 *db, const int x, const int y, co
     return WORLD_OK;
 }
 
-int load_world(sqlite3 *db, struct World *world) {
+int load_world(sqlite3 *db, struct World *world, const struct Camera *cam) {
     world_error_e err;
     int loaded_chunks = 0, errors = 0, fatal_errors = 0;
 
     world->db = db;
+
+    world->loaded_center_x = cam->chunk_x;
+    world->loaded_center_y = cam->chunk_y;
+    world->loaded_center_z = cam->chunk_z;
 
     if (_world_create_open_table(world->db) != WORLD_OK) {
         fprintf(stderr, "Failed to open world table.\n");
@@ -153,10 +159,13 @@ int load_world(sqlite3 *db, struct World *world) {
         return 1;
     }
 
-    for (int x = 0; x < LOADED_SIDE; x++) {
-        for (int y = 0; y < LOADED_SIDE; y++) {
-            for (int z = 0; z < LOADED_SIDE; z++) {
-                int idx = z * LOADED_SIDE * LOADED_SIDE + y * LOADED_SIDE + x;
+    int x = world->loaded_center_x - RENDER_DISTANCE;
+    for (int xi = 0; xi < LOADED_SIDE; xi++, x++) {
+        int y = world->loaded_center_y - RENDER_DISTANCE;
+        for (int yi = 0; yi < LOADED_SIDE; yi++, y++) {
+            int z = world->loaded_center_z - RENDER_DISTANCE;
+            for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
+                int idx = zi * LOADED_SIDE * LOADED_SIDE + yi * LOADED_SIDE + xi;
                 struct Chunk *chunk = &world->loaded_chunks[idx];
                 err = _world_load_chunk(world->db, x, y, z, chunk);
 
@@ -233,6 +242,7 @@ int close_world(struct World *world) {
                         default:
                             break;
                     }
+                    chunk->modified = false;
                 }
             }
         }
@@ -242,4 +252,101 @@ int close_world(struct World *world) {
     printf("World saved: %d chunk, %d fatal errors.\n", saved_chunks, fatal_errors);
 
     return 0;
+}
+
+static bool _check_chunk_in_render_dist(const struct Chunk *chunk, const int x, const int y,
+                                        const int z) {
+    return abs(chunk->x - x) <= RENDER_DISTANCE && abs(chunk->y - y) <= RENDER_DISTANCE &&
+           abs(chunk->z - z) <= RENDER_DISTANCE;
+}
+
+void update_world(struct World *world, struct Camera *cam) {
+    if (cam->chunk_x == world->loaded_center_x && cam->chunk_y == world->loaded_center_y &&
+        cam->chunk_z == world->loaded_center_z)
+        return;
+
+    printf("%d %d %d\n", world->loaded_center_x, world->loaded_center_y, world->loaded_center_z);
+
+    int free_indices[WORLD_VOLUME];
+    int free_indices_cnt = 0;
+
+    int x = world->loaded_center_x - RENDER_DISTANCE;
+    for (int xi = 0; xi < LOADED_SIDE; xi++, x++) {
+        int y = world->loaded_center_y - RENDER_DISTANCE;
+        for (int yi = 0; yi < LOADED_SIDE; yi++, y++) {
+            int z = world->loaded_center_z - RENDER_DISTANCE;
+            for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
+                int idx = zi * LOADED_SIDE * LOADED_SIDE + yi * LOADED_SIDE + xi;
+                struct Chunk *chunk = &world->loaded_chunks[idx];
+
+                if (!_check_chunk_in_render_dist(chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z)) {
+                    free_indices[free_indices_cnt++] = idx;
+                    switch (_world_save_chunk(world->db, chunk)) {
+                        case WORLD_OK:
+                            printf("CHUNK[%d, %d, %d]: saved successfully.\n", chunk->x, chunk->y,
+                                   chunk->z);
+                            break;
+                        case DB_ERROR:
+                            fprintf(stderr, "CHUNK[%d, %d, %d]: DB error saving chunk.\n", chunk->x,
+                                    chunk->y, chunk->z);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < free_indices_cnt; i++) {
+        printf("%d ", free_indices[i]);
+    }
+    printf("\n");
+
+    x = cam->chunk_x - RENDER_DISTANCE;
+    for (int xi = 0; xi < LOADED_SIDE; xi++, x++) {
+        int y = cam->chunk_y - RENDER_DISTANCE;
+        for (int yi = 0; yi < LOADED_SIDE; yi++, y++) {
+            int z = cam->chunk_z - RENDER_DISTANCE;
+            for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
+                struct Chunk test_chunk = {.x = x, .y = y, .z = z};
+                if (_check_chunk_in_render_dist(&test_chunk, cam->chunk_x, cam->chunk_y,
+                                                cam->chunk_z) &&
+                    !_check_chunk_in_render_dist(&test_chunk, world->loaded_center_x,
+                                                 world->loaded_center_y, world->loaded_center_z)) {
+                    struct Chunk *chunk = &world->loaded_chunks[free_indices[--free_indices_cnt]];
+                    switch (_world_load_chunk(world->db, x, y, z, chunk)) {
+                        case WORLD_OK:
+                            printf("CHUNK[%d, %d, %d]: loaded successfully.\n", chunk->x, chunk->y,
+                                   chunk->z);
+                            break;
+                        case CHUNK_NOT_FOUND:
+                            _world_chunk_gen(chunk);
+                            printf("CHUNK[%d, %d, %d]: generated successfully.\n", chunk->x,
+                                   chunk->y, chunk->z);
+                            break;
+                        case CHUNK_INVALID_DATA:
+                            fprintf(stderr, "CHUNK[%d, %d, %d]: regenerating corrupted chunk.\n",
+                                    chunk->x, chunk->y, chunk->z);
+                            _world_chunk_gen(chunk);
+                            break;
+                        case DB_ERROR:
+                            fprintf(stderr, "CHUNK[%d, %d, %d]: DB error loading chunk.\n",
+                                    chunk->x, chunk->y, chunk->z);
+                            break;
+                        case CHUNK_MEMORY_ERROR:
+                            fprintf(stderr, "CHUNK[%d, %d, %d]: Memory error loading chunk.\n",
+                                    chunk->x, chunk->y, chunk->z);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    world->loaded_center_x = cam->chunk_x;
+    world->loaded_center_y = cam->chunk_y;
+    world->loaded_center_z = cam->chunk_z;
 }

@@ -91,6 +91,10 @@ static void _vertex_buffer_init(struct VertexBuffer *buff, const float *vertices
 static void _chunk_render(const struct Renderer *renderer, const struct Chunk *chunk) {
     glBindVertexArray(renderer->cube.vao);
 
+    shader_uniform_int(renderer->shader, "chunk_x", chunk->x);
+    shader_uniform_int(renderer->shader, "chunk_y", chunk->y);
+    shader_uniform_int(renderer->shader, "chunk_z", chunk->z);
+
     for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE; i++) {
         if (chunk->data[i]) {
             shader_uniform_int(renderer->shader, "block_index", i);
@@ -104,11 +108,8 @@ static void _world_render(const struct Renderer *renderer, const struct World *w
     shader_bind(renderer->shader);
 
     for (int x = 0; x < LOADED_SIDE; x++) {
-        shader_uniform_int(renderer->shader, "chunk_x", x);
         for (int y = 0; y < LOADED_SIDE; y++) {
-            shader_uniform_int(renderer->shader, "chunk_y", y);
             for (int z = 0; z < LOADED_SIDE; z++) {
-                shader_uniform_int(renderer->shader, "chunk_z", z);
                 int idx = z * LOADED_SIDE * LOADED_SIDE + y * LOADED_SIDE + x;
                 _chunk_render(renderer, &world->loaded_chunks[idx]);
             }

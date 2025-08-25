@@ -4,7 +4,11 @@
 #include <sqlite3.h>
 #include <stdbool.h>
 
-#define LOADED_SIDE (10)
+#include "camera.h"
+
+#define RENDER_DISTANCE 4
+
+#define LOADED_SIDE (RENDER_DISTANCE * 2 + 1)
 #define WORLD_VOLUME (LOADED_SIDE * LOADED_SIDE * LOADED_SIDE)
 
 #define CHUNK_SIZE 16
@@ -21,9 +25,14 @@ struct Chunk {
 struct World {
     sqlite3 *db;
     struct Chunk *loaded_chunks;
+
+    int loaded_center_x;
+    int loaded_center_y;
+    int loaded_center_z;
 };
 
-int load_world(sqlite3 *db, struct World *world);
+int load_world(sqlite3 *db, struct World *world, const struct Camera *cam);
 int close_world(struct World *world);
+void update_world(struct World *world, struct Camera *cam);
 
 #endif /* WORLD_H */

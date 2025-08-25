@@ -6,7 +6,7 @@
 
 static void _camera_reset_position(struct Camera *cam) {
     cam->pos[0] = 0.0f;
-    cam->pos[1] = 10.0f;
+    cam->pos[1] = 50.0f;
     cam->pos[2] = 0.0f;
 
     cam->pitch = -20.0f;
