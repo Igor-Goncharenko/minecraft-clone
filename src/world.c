@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <sqlite3.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +19,8 @@ typedef enum {
 } world_error_e;
 
 static void _world_chunk_gen(struct Chunk *chunk) {
+    chunk->modified = true;
+
     for (int ch_x = 0; ch_x < CHUNK_SIZE; ch_x++) {
         for (int ch_y = 0; ch_y < CHUNK_SIZE; ch_y++) {
             for (int ch_z = 0; ch_z < CHUNK_SIZE; ch_z++) {
@@ -98,6 +101,7 @@ static world_error_e _world_load_chunk(sqlite3 *db, const int x, const int y, co
     int rc;
     sqlite3_stmt *stmt;
 
+    chunk->modified = false;
     chunk->x = x;
     chunk->y = y;
     chunk->z = z;
@@ -220,11 +224,17 @@ int close_world(struct World *world) {
                 for (int z = 0; z < LOADED_SIDE; z++) {
                     int idx = z * LOADED_SIDE * LOADED_SIDE + y * LOADED_SIDE + x;
                     struct Chunk *chunk = &world->loaded_chunks[idx];
+                    if (!chunk->modified) {
+                        printf("CHUNK[%d, %d, %d]: not modified, skip saving.\n", chunk->x,
+                               chunk->y, chunk->z);
+                        continue;
+                    }
+
                     err = _world_save_chunk(world->db, chunk);
 
                     switch (err) {
                         case WORLD_OK:
-                            printf("CHUNK[%d, %d, %d]: loaded successfully.\n", chunk->x, chunk->y,
+                            printf("CHUNK[%d, %d, %d]: saved successfully.\n", chunk->x, chunk->y,
                                    chunk->z);
                             saved_chunks++;
                             break;
