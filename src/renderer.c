@@ -111,7 +111,7 @@ static void _world_render(const struct Renderer *renderer, const struct World *w
         for (int y = 0; y < LOADED_SIDE; y++) {
             for (int z = 0; z < LOADED_SIDE; z++) {
                 int idx = z * LOADED_SIDE * LOADED_SIDE + y * LOADED_SIDE + x;
-                _chunk_render(renderer, &world->loaded_chunks[idx]);
+                _chunk_render(renderer, &world->chunks[idx]);
             }
         }
     }

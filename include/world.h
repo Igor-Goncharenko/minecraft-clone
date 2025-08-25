@@ -24,11 +24,11 @@ struct Chunk {
 
 struct World {
     sqlite3 *db;
-    struct Chunk *loaded_chunks;
+    struct Chunk *chunks;
 
-    int loaded_center_x;
-    int loaded_center_y;
-    int loaded_center_z;
+    int center_x;
+    int center_y;
+    int center_z;
 };
 
 int load_world(sqlite3 *db, struct World *world, const struct Camera *cam);
