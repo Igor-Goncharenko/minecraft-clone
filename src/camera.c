@@ -97,8 +97,8 @@ static int _camera_init_table(sqlite3 *db) {
 
 static void _update_camera_chunk_coordinates(struct Camera *cam) {
     cam->chunk_x = (int)cam->pos[0] / 16 + ((cam->pos[0] < 0) ? -1 : 0);
-    cam->chunk_y = (int)cam->pos[2] / 16 + ((cam->pos[2] < 0) ? -1 : 0);
-    cam->chunk_z = (int)cam->pos[1] / 16 + ((cam->pos[1] < 0) ? -1 : 0);
+    cam->chunk_y = (int)cam->pos[1] / 16 + ((cam->pos[1] < 0) ? -1 : 0);
+    cam->chunk_z = (int)cam->pos[2] / 16 + ((cam->pos[2] < 0) ? -1 : 0);
 }
 
 static void _update_camera_direction(struct Camera *cam) {

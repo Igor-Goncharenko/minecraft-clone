@@ -21,7 +21,7 @@ static void _world_chunk_gen(struct Chunk *chunk) {
                 int x = chunk->x * CHUNK_SIZE + ch_x;
                 int y = chunk->y * CHUNK_SIZE + ch_y;
                 int z = chunk->z * CHUNK_SIZE + ch_z;
-                chunk->data[idx] = (WORLD_GEN_FUNC(x, y) > z) ? 1 : 0;
+                chunk->data[idx] = (WORLD_GEN_FUNC(x, z) > y) ? 1 : 0;
             }
         }
     }
