@@ -113,6 +113,7 @@ static void _update_camera_direction(struct Camera *cam) {
     glm_vec3_normalize(cam->front);
 
     glm_vec3_cross((vec3){0.0f, 1.0f, 0.0f}, cam->front, cam->right);
+    glm_vec3_normalize(cam->right);
     glm_vec3_cross(cam->front, cam->right, cam->up);
 }
 
