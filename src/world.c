@@ -73,7 +73,6 @@ static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
         // chunk not found
         sqlite3_finalize(stmt);
         _world_chunk_gen(chunk);
-        printf("CHUNK[%d, %d, %d]: generated successfully.\n", chunk->x, chunk->y, chunk->z);
         return 0;
     }
     if (rc != SQLITE_ROW) {
@@ -102,17 +101,13 @@ static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
     }
 
     memcpy(chunk->data, blob_data, blob_size);
-    printf("CHUNK[%d, %d, %d]: loaded successfully.\n", chunk->x, chunk->y, chunk->z);
     sqlite3_finalize(stmt);
 
     return 0;
 }
 
 static int _world_save_chunk(sqlite3 *db, const struct Chunk *chunk) {
-    if (!chunk->modified) {
-        printf("CHUNK[%d, %d, %d]: not modified, skip saving.\n", chunk->x, chunk->y, chunk->z);
-        return 0;
-    }
+    if (!chunk->modified) return 0;
 
     const char *sql = "INSERT OR REPLACE INTO chunks (x, y, z, data) VALUES (?, ?, ?, ?);";
     int rc;
@@ -137,8 +132,6 @@ static int _world_save_chunk(sqlite3 *db, const struct Chunk *chunk) {
     }
 
     sqlite3_finalize(stmt);
-    printf("CHUNK[%d, %d, %d]: saved successfully.\n", chunk->x, chunk->y, chunk->z);
-
     return 0;
 }
 
@@ -147,6 +140,58 @@ static bool _chunk_in_render_dist(const struct Chunk *chunk, const int center_x,
     return abs(chunk->x - center_x) <= RENDER_DISTANCE &&
            abs(chunk->y - center_y) <= RENDER_DISTANCE &&
            abs(chunk->z - center_z) <= RENDER_DISTANCE;
+}
+
+static int _unload_chunk_out_of_range(struct World *world, struct Camera *cam, int *free_indices) {
+    int free_indices_cnt = 0;
+
+    int x = world->center_x - RENDER_DISTANCE;
+
+    for (int xi = 0; xi < LOADED_SIDE; xi++, x++) {
+        int y = world->center_y - RENDER_DISTANCE;
+
+        for (int yi = 0; yi < LOADED_SIDE; yi++, y++) {
+            int z = world->center_z - RENDER_DISTANCE;
+
+            for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
+                int idx = zi * LOADED_SIDE * LOADED_SIDE + yi * LOADED_SIDE + xi;
+                struct Chunk *chunk = &world->chunks[idx];
+
+                if (!_chunk_in_render_dist(chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z)) {
+                    free_indices[free_indices_cnt++] = idx;
+                    _world_save_chunk(world->db, chunk);
+                }
+            }
+        }
+    }
+
+    return free_indices_cnt;
+}
+
+static void _load_new_chunks_in_range(struct World *world, struct Camera *cam,
+                                      const int *free_indices, const int free_indices_cnt) {
+    int chunk_to_load_left = free_indices_cnt;
+
+    int x = x = cam->chunk_x - RENDER_DISTANCE;
+
+    for (int xi = 0; xi < LOADED_SIDE; xi++, x++) {
+        int y = cam->chunk_y - RENDER_DISTANCE;
+
+        for (int yi = 0; yi < LOADED_SIDE; yi++, y++) {
+            int z = cam->chunk_z - RENDER_DISTANCE;
+
+            for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
+                struct Chunk test_chunk = {.x = x, .y = y, .z = z};
+
+                if (_chunk_in_render_dist(&test_chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z) &&
+                    !_chunk_in_render_dist(&test_chunk, world->center_x, world->center_y,
+                                           world->center_z)) {
+                    struct Chunk *chunk = &world->chunks[free_indices[--chunk_to_load_left]];
+                    _world_load_chunk(world->db, x, y, z, chunk);
+                }
+            }
+        }
+    }
 }
 
 int load_world(sqlite3 *db, struct World *world, const struct Camera *cam) {
@@ -169,9 +214,14 @@ int load_world(sqlite3 *db, struct World *world, const struct Camera *cam) {
         return 1;
     }
 
-    for (int xi = 0, x = world->center_x - RENDER_DISTANCE; xi < LOADED_SIDE; xi++, x++) {
-        for (int yi = 0, y = world->center_y - RENDER_DISTANCE; yi < LOADED_SIDE; yi++, y++) {
-            for (int zi = 0, z = world->center_z - RENDER_DISTANCE; zi < LOADED_SIDE; zi++, z++) {
+    int x = world->center_x - RENDER_DISTANCE;
+    for (int xi = 0; xi < LOADED_SIDE; xi++, x++) {
+        int y = world->center_y - RENDER_DISTANCE;
+
+        for (int yi = 0; yi < LOADED_SIDE; yi++, y++) {
+            int z = world->center_z - RENDER_DISTANCE;
+
+            for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
                 int idx = zi * LOADED_SIDE * LOADED_SIDE + yi * LOADED_SIDE + xi;
                 struct Chunk *chunk = &world->chunks[idx];
                 if (_world_load_chunk(world->db, x, y, z, chunk))
@@ -217,54 +267,16 @@ void update_world(struct World *world, struct Camera *cam) {
         cam->chunk_z == world->center_z)
         return;
 
-    int saved_chunks = 0, loaded_chunks = 0, errors = 0;
-
-    printf("%d %d %d\n", world->center_x, world->center_y, world->center_z);
-
-    int free_indices[WORLD_VOLUME];
+    int free_indices[WORLD_VOLUME - (LOADED_SIDE - 1) * (LOADED_SIDE - 1) * (LOADED_SIDE - 1)];
     int free_indices_cnt = 0;
 
-    for (int xi = 0, x = world->center_x - RENDER_DISTANCE; xi < LOADED_SIDE; xi++, x++) {
-        for (int yi = 0, y = world->center_y - RENDER_DISTANCE; yi < LOADED_SIDE; yi++, y++) {
-            for (int zi = 0, z = world->center_z - RENDER_DISTANCE; zi < LOADED_SIDE; zi++, z++) {
-                int idx = zi * LOADED_SIDE * LOADED_SIDE + yi * LOADED_SIDE + xi;
-                struct Chunk *chunk = &world->chunks[idx];
-
-                if (!_chunk_in_render_dist(chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z)) {
-                    free_indices[free_indices_cnt++] = idx;
-                    if (_world_save_chunk(world->db, chunk))
-                        errors++;
-                    else
-                        saved_chunks++;
-                }
-            }
-        }
-    }
+    free_indices_cnt = _unload_chunk_out_of_range(world, cam, free_indices);
 
     if (free_indices_cnt > 0) {
-        for (int xi = 0, x = cam->chunk_x - RENDER_DISTANCE; xi < LOADED_SIDE; xi++, x++) {
-            for (int yi = 0, y = cam->chunk_y - RENDER_DISTANCE; yi < LOADED_SIDE; yi++, y++) {
-                for (int zi = 0, z = cam->chunk_z - RENDER_DISTANCE; zi < LOADED_SIDE; zi++, z++) {
-                    struct Chunk test_chunk = {.x = x, .y = y, .z = z};
-                    if (_chunk_in_render_dist(&test_chunk, cam->chunk_x, cam->chunk_y,
-                                              cam->chunk_z) &&
-                        !_chunk_in_render_dist(&test_chunk, world->center_x, world->center_y,
-                                               world->center_z)) {
-                        struct Chunk *chunk = &world->chunks[free_indices[--free_indices_cnt]];
-                        if (_world_load_chunk(world->db, x, y, z, chunk))
-                            errors++;
-                        else
-                            loaded_chunks++;
-                    }
-                }
-            }
-        }
+        _load_new_chunks_in_range(world, cam, free_indices, free_indices_cnt);
     }
 
     world->center_x = cam->chunk_x;
     world->center_y = cam->chunk_y;
     world->center_z = cam->chunk_z;
-
-    printf("World update finished: %d loaded, %d saved, %d errors.\n", loaded_chunks, saved_chunks,
-           errors);
 }
