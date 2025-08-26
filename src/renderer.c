@@ -10,59 +10,6 @@
 #define VERTEX_SHADER PROJECT_ROOT "/shaders/basic.vs"
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
 
-// clang-format off
-static const float CUBE_VERTICES[] = {
-    /* positions        * normals         */
-
-    /* front */
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-    /* right */
-     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-    /* top */
-    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-
-    /* back */
-     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-    /* left */
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-    -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-    /* bottom */
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-};
-
-static const unsigned CUBE_INDICES[] = {
-     0,  1,  2,     /* front */
-     3,  2,  1,
-     4,  5,  6,     /* right */
-     7,  6,  5,
-     8,  9, 10,     /* top */
-    11, 10,  9,
-    12, 13, 14,     /* back */
-    15, 14, 13,
-    16, 17, 18,     /* left */
-    19, 18, 17,
-    20, 21, 22,     /* bottom */
-    23, 22, 21
-};
-// clang-format on
-
 static void _chunk_render(const struct Renderer *renderer, const struct Chunk *chunk) {
     shader_uniform_int(renderer->shader, "chunk_x", chunk->x);
     shader_uniform_int(renderer->shader, "chunk_y", chunk->y);
@@ -71,14 +18,12 @@ static void _chunk_render(const struct Renderer *renderer, const struct Chunk *c
     for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE; i++) {
         if (chunk->data[i]) {
             shader_uniform_int(renderer->shader, "block_index", i);
-            glDrawElements(GL_TRIANGLES, renderer->total_points, GL_UNSIGNED_INT, 0);
+            mesh_draw(&chunk->mesh);
         }
     }
 }
 
 static void _world_render(const struct Renderer *renderer, const struct World *world) {
-    mesh_bind(&renderer->block_mesh);
-
     shader_bind(renderer->shader);
 
     for (int x = 0; x < LOADED_SIDE; x++) {
@@ -106,12 +51,6 @@ int renderer_init(struct Renderer *renderer) {
     shader_uniform_3_floats(renderer->shader, "dirLight.diffuse", 0.7f, 0.7f, 0.7f);
     shader_uniform_3_floats(renderer->shader, "dirLight.specular", 0.9f, 0.9f, 0.9f);
 
-    create_mesh(&renderer->block_mesh);
-    upload_mesh_data(&renderer->block_mesh, CUBE_VERTICES, sizeof(CUBE_VERTICES) / sizeof(float),
-                     CUBE_INDICES, sizeof(CUBE_INDICES) / sizeof(unsigned));
-
-    renderer->total_points = sizeof(CUBE_INDICES) / sizeof(unsigned);
-
     return 0;
 }
 
@@ -131,5 +70,4 @@ void renderer_render(const struct Renderer *renderer, const struct Camera *cam,
 
 void renderer_destroy(struct Renderer *renderer) {
     shader_destroy(renderer->shader);
-    delete_mesh(&renderer->block_mesh);
 }

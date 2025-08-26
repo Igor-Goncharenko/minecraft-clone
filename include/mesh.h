@@ -7,7 +7,7 @@ struct Mesh {
     GLuint vao;
     GLuint vbo;
     GLuint ebo;
-    unsigned int index_count;
+    unsigned vertex_count;
 };
 
 void create_mesh(struct Mesh *mesh);
@@ -18,5 +18,7 @@ void upload_mesh_data(struct Mesh *mesh, const float *vertices, const size_t ver
 void delete_mesh(struct Mesh *mesh);
 
 void mesh_bind(const struct Mesh *mesh);
+
+void mesh_draw(const struct Mesh *mesh);
 
 #endif /* MESH_H */

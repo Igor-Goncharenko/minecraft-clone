@@ -79,10 +79,12 @@ int main(void) {
     }
 
 cleanup:
+    close_world(&world);
+    // we must terminate glfw after world saving
+    // because it has opengl data
     renderer_destroy(&renderer);
     glfwDestroyWindow(window);
     glfwTerminate();
-    close_world(&world);
     camera_save(&cam);
     db_close(&db);
     return EXIT_SUCCESS;

@@ -36,25 +36,23 @@ static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
     int rc;
     sqlite3_stmt *stmt;
 
-    chunk->modified = false;
-    chunk->x = x;
-    chunk->y = y;
-    chunk->z = z;
-
     if ((rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL)) != SQLITE_OK) {
         fprintf(stderr, "Failed to prepare statement: %s\n", sqlite3_errmsg(db));
         return 1;
     }
 
-    sqlite3_bind_int(stmt, 1, chunk->x);
-    sqlite3_bind_int(stmt, 2, chunk->y);
-    sqlite3_bind_int(stmt, 3, chunk->z);
+    chunk_init(chunk, x, y, z);
+
+    sqlite3_bind_int(stmt, 1, x);
+    sqlite3_bind_int(stmt, 2, y);
+    sqlite3_bind_int(stmt, 3, z);
 
     rc = sqlite3_step(stmt);
     if (rc == SQLITE_DONE) {
         // chunk not found
         sqlite3_finalize(stmt);
-        world_chunk_gen(chunk);
+        chunk_gen(chunk, x, y, z);
+        chunk_mesh_update(chunk);
         return 0;
     }
     if (rc != SQLITE_ROW) {
@@ -71,11 +69,12 @@ static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
         sqlite3_finalize(stmt);
         fprintf(stderr, "CHUNK[%d, %d %d]: Null data in chunk. Regenerating\n", chunk->x, chunk->y,
                 chunk->z);
-        world_chunk_gen(chunk);
+        chunk_gen(chunk, x, y, z);
+        chunk_mesh_update(chunk);
         return 0;
     }
 
-    if ((unsigned long)blob_size > CHUNK_BYTE_SIZE) {
+    if ((unsigned long)blob_size != CHUNK_BYTE_SIZE) {
         fprintf(stderr, "CHUNK[%d, %d %d]: blob_size greater than chunk buffer: %d > %lu.\n",
                 chunk->x, chunk->y, chunk->z, blob_size, CHUNK_BYTE_SIZE);
         sqlite3_finalize(stmt);
@@ -83,13 +82,14 @@ static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
     }
 
     memcpy(chunk->data, blob_data, blob_size);
+    chunk_mesh_update(chunk);
     sqlite3_finalize(stmt);
 
     return 0;
 }
 
-static int _world_save_chunk(sqlite3 *db, const struct Chunk *chunk) {
-    if (!chunk->modified) return 0;
+static int _world_save_chunk(sqlite3 *db, struct Chunk *chunk) {
+    if (!chunk->modified_unsaved) return 0;
 
     const char *sql = "INSERT OR REPLACE INTO chunks (x, y, z, data) VALUES (?, ?, ?, ?);";
     int rc;
@@ -97,6 +97,8 @@ static int _world_save_chunk(sqlite3 *db, const struct Chunk *chunk) {
 
     if ((rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL)) != SQLITE_OK) {
         fprintf(stderr, "Failed to prepare statement (%d): %s\n", rc, sqlite3_errmsg(db));
+        chunk_destroy(chunk);
+
         return 1;
     }
 
@@ -109,11 +111,15 @@ static int _world_save_chunk(sqlite3 *db, const struct Chunk *chunk) {
         fprintf(stderr, "Execution failed: %s\n", sqlite3_errmsg(db));
         fprintf(stderr, "CHUNK[%d, %d, %d]: DB error saving chunk.\n", chunk->x, chunk->y,
                 chunk->z);
+        chunk_destroy(chunk);
         sqlite3_finalize(stmt);
+
         return 1;
     }
 
+    chunk_destroy(chunk);
     sqlite3_finalize(stmt);
+
     return 0;
 }
 
@@ -232,7 +238,7 @@ int close_world(struct World *world) {
                         errors++;
                     else
                         saved_chunks++;
-                    chunk->modified = false;
+                    chunk->modified_unsaved = false;
                 }
             }
         }
