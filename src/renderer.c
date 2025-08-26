@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "camera.h"
+#include "mesh.h"
 #include "shader.h"
 #include "world.h"
 
@@ -62,35 +63,7 @@ static const unsigned CUBE_INDICES[] = {
 };
 // clang-format on
 
-static void _vertex_buffer_init(struct VertexBuffer *buff, const float *vertices,
-                                const unsigned sizeof_vertices, const unsigned *indices,
-                                const unsigned sizeof_indices) {
-    glGenVertexArrays(1, &buff->vao);
-    glGenBuffers(1, &buff->vbo);
-    glGenBuffers(1, &buff->ebo);
-
-    glBindVertexArray(buff->vao);
-
-    glBindBuffer(GL_ARRAY_BUFFER, buff->vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * sizeof_vertices, vertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buff->ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(float) * sizeof_indices, indices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glBindVertexArray(0);
-}
-
 static void _chunk_render(const struct Renderer *renderer, const struct Chunk *chunk) {
-    glBindVertexArray(renderer->cube.vao);
-
     shader_uniform_int(renderer->shader, "chunk_x", chunk->x);
     shader_uniform_int(renderer->shader, "chunk_y", chunk->y);
     shader_uniform_int(renderer->shader, "chunk_z", chunk->z);
@@ -101,10 +74,11 @@ static void _chunk_render(const struct Renderer *renderer, const struct Chunk *c
             glDrawElements(GL_TRIANGLES, renderer->total_points, GL_UNSIGNED_INT, 0);
         }
     }
-    glBindVertexArray(0);
 }
 
 static void _world_render(const struct Renderer *renderer, const struct World *world) {
+    mesh_bind(&renderer->block_mesh);
+
     shader_bind(renderer->shader);
 
     for (int x = 0; x < LOADED_SIDE; x++) {
@@ -132,8 +106,9 @@ int renderer_init(struct Renderer *renderer) {
     shader_uniform_3_floats(renderer->shader, "dirLight.diffuse", 0.7f, 0.7f, 0.7f);
     shader_uniform_3_floats(renderer->shader, "dirLight.specular", 0.9f, 0.9f, 0.9f);
 
-    _vertex_buffer_init(&renderer->cube, CUBE_VERTICES, sizeof(CUBE_VERTICES), CUBE_INDICES,
-                        sizeof(CUBE_INDICES));
+    create_mesh(&renderer->block_mesh);
+    upload_mesh_data(&renderer->block_mesh, CUBE_VERTICES, sizeof(CUBE_VERTICES) / sizeof(float),
+                     CUBE_INDICES, sizeof(CUBE_INDICES) / sizeof(unsigned));
 
     renderer->total_points = sizeof(CUBE_INDICES) / sizeof(unsigned);
 
@@ -156,8 +131,5 @@ void renderer_render(const struct Renderer *renderer, const struct Camera *cam,
 
 void renderer_destroy(struct Renderer *renderer) {
     shader_destroy(renderer->shader);
-
-    glDeleteVertexArrays(1, &renderer->cube.vao);
-    glDeleteBuffers(1, &renderer->cube.vbo);
-    glDeleteBuffers(1, &renderer->cube.ebo);
+    delete_mesh(&renderer->block_mesh);
 }

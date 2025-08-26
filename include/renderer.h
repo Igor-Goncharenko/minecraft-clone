@@ -2,20 +2,14 @@
 #define RENDERER_H
 
 #include "camera.h"
-#include "gfx.h"
+#include "mesh.h"
 #include "shader.h"
 #include "world.h"
 
-struct VertexBuffer {
-    GLuint vao;
-    GLuint vbo;
-    GLuint ebo;
-};
-
 struct Renderer {
-    struct VertexBuffer cube;
     shader_t shader;
     unsigned total_points;
+    struct Mesh block_mesh;
 };
 
 int renderer_init(struct Renderer *renderer);
