@@ -1,5 +1,5 @@
-#ifndef CHUNK_H
-#define CHUNK_H
+#ifndef MESH_H
+#define MESH_H
 
 #include "gfx.h"
 
@@ -19,4 +19,4 @@ void delete_mesh(struct Mesh *mesh);
 
 void mesh_bind(const struct Mesh *mesh);
 
-#endif /* CHUNK_H */
+#endif /* MESH_H */
