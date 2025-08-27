@@ -55,10 +55,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE
-        /W4
-        /WX
-        /wd4100
-        /wd4201
+        #/W4
+        #/WX
+        #/wd4100
+        #/wd4201
     )
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE
@@ -87,7 +87,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g)
     endif()
 else()
-    file(COPY "${CMAKE_BINARY_DIR}/Release/shaders" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+    file(COPY "${CMAKE_SOURCE_DIR}/shaders" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 
     if(MSVC)
         target_compile_options(${PROJECT_NAME} PRIVATE /O2)
