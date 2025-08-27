@@ -5,6 +5,8 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
+option(BUILD_DEBUG "Build with debug symbols" ON)
+
 if (NOT EXISTS ${CMAKE_SOURCE_DIR}/libs/glfw/CMakeLists.txt OR 
     NOT EXISTS ${CMAKE_SOURCE_DIR}/libs/cglm/CMakeLists.txt)
    find_package(Git REQUIRED)
@@ -60,7 +62,16 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -Wno-unused-parameter
 )
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE 
-    MINECRAFT_DEBUG 
-    PROJECT_ROOT="${CMAKE_SOURCE_DIR}"
-)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(${PROJECT_NAME} PRIVATE 
+        MINECRAFT_DEBUG 
+        PROJECT_ROOT="${CMAKE_SOURCE_DIR}"
+    )
+    target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        OUTPUT_NAME "${PROJECT_NAME}-debug"
+    )
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -O3)
+    file(COPY "${CMAKE_SOURCE_DIR}/shaders" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
