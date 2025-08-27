@@ -19,6 +19,8 @@ The output will be either file `minecraft-clone`or file `minecraft-clone-debug`.
 I used MSVC compiler and visual studio generator.
 
 ```cmd
+mkdir build
+cd build
 cmake .. -G "Visual Studio 17 2022" -A x64
 cmake --build . --config Release
 ```
