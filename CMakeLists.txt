@@ -51,16 +51,25 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME} PRIVATE
     cglm
     glfw
-    m
-    dl
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-    -Wall
-    -Wextra
-    -Werror
-    -Wno-unused-parameter
-)
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        /W4
+        /WX
+        /wd4100
+        /wd4201
+    )
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        -Wall
+        -Wextra
+        -Werror
+        -Wno-unused-parameter
+    )
+
+    target_link_libraries(${PROJECT_NAME} PRIVATE m)
+endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(${PROJECT_NAME} PRIVATE 
@@ -71,7 +80,18 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set_target_properties(${PROJECT_NAME} PROPERTIES
         OUTPUT_NAME "${PROJECT_NAME}-debug"
     )
+
+    if(MSVC)
+        target_compile_options(${PROJECT_NAME} PRIVATE /Od /Zi)
+    else()
+        target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g)
+    endif()
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -O3)
-    file(COPY "${CMAKE_SOURCE_DIR}/shaders" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+    file(COPY "${CMAKE_BINARY_DIR}/Release/shaders" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+
+    if(MSVC)
+        target_compile_options(${PROJECT_NAME} PRIVATE /O2)
+    else()
+        target_compile_options(${PROJECT_NAME} PRIVATE -O3)
+    endif()
 endif()
