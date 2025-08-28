@@ -255,7 +255,7 @@ void update_world(struct World *world, struct Camera *cam) {
         cam->chunk_z == world->center_z)
         return;
 
-    int free_indices[WORLD_VOLUME - (LOADED_SIDE - 1) * (LOADED_SIDE - 1) * (LOADED_SIDE - 1)];
+    int free_indices[WORLD_VOLUME];
     int free_indices_cnt = 0;
 
     free_indices_cnt = _unload_chunk_out_of_range(world, cam, free_indices);
