@@ -15,12 +15,7 @@ static void _chunk_render(const struct Renderer *renderer, const struct Chunk *c
     shader_uniform_int(renderer->shader, "chunk_y", chunk->y);
     shader_uniform_int(renderer->shader, "chunk_z", chunk->z);
 
-    for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE; i++) {
-        if (chunk->data[i]) {
-            shader_uniform_int(renderer->shader, "block_index", i);
-            mesh_draw(&chunk->mesh);
-        }
-    }
+    mesh_draw(&chunk->mesh);
 }
 
 static void _world_render(const struct Renderer *renderer, const struct World *world) {

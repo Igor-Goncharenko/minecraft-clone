@@ -13,7 +13,7 @@ struct Chunk {
     bool modified_unsaved, modified;
     int x, y, z;
     /* for now we have only one type of block */
-    int data[CHUNK_VOLUME];
+    int data[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
 
     struct Mesh mesh;
 };

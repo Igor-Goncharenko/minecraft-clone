@@ -11,8 +11,10 @@ void create_mesh(struct Mesh *mesh) {
 }
 
 void upload_mesh_data(struct Mesh *mesh, const float *vertices, const size_t vertex_count,
-                      const unsigned int *indices, const size_t index_count) {
+                      const unsigned *indices, const size_t index_count) {
     mesh->vertex_count = index_count;
+
+    if (index_count == 0 || vertex_count == 0) return;
 
     glGenVertexArrays(1, &mesh->vao);
     glGenBuffers(1, &mesh->vbo);
