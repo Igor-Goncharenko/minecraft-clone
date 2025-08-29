@@ -52,7 +52,6 @@ static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
         // chunk not found
         sqlite3_finalize(stmt);
         chunk_gen(chunk, x, y, z);
-        chunk_mesh_update(chunk);
         return 0;
     }
     if (rc != SQLITE_ROW) {
@@ -70,7 +69,6 @@ static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
         fprintf(stderr, "CHUNK[%d, %d %d]: Null data in chunk. Regenerating\n", chunk->x, chunk->y,
                 chunk->z);
         chunk_gen(chunk, x, y, z);
-        chunk_mesh_update(chunk);
         return 0;
     }
 
@@ -82,7 +80,6 @@ static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
     }
 
     memcpy(chunk->data, blob_data, blob_size);
-    chunk_mesh_update(chunk);
     sqlite3_finalize(stmt);
 
     return 0;
@@ -182,6 +179,37 @@ static void _load_new_chunks_in_range(struct World *world, struct Camera *cam,
     }
 }
 
+static struct Chunk *_world_get_chunk(const struct World *world, const int x, const int y,
+                                      const int z) {
+    for (int i = 0; i < WORLD_VOLUME; i++) {
+        struct Chunk *chunk = &world->chunks[i];
+        if (chunk->x == x && chunk->y == y && chunk->z == z) return chunk;
+    }
+    return NULL;
+}
+
+static void _world_update_chunk_meshes(struct World *world) {
+    for (int xi = 0; xi < LOADED_SIDE; xi++) {
+        for (int yi = 0; yi < LOADED_SIDE; yi++) {
+            for (int zi = 0; zi < LOADED_SIDE; zi++) {
+                const int idx = zi * LOADED_SIDE * LOADED_SIDE + yi * LOADED_SIDE + xi;
+                struct Chunk *chunk = &world->chunks[idx];
+
+                const struct Chunk *nearby_chunks[6] = {
+                    [FACE_FRONT] = _world_get_chunk(world, chunk->x, chunk->y - 1, chunk->z),
+                    [FACE_RIGHT] = _world_get_chunk(world, chunk->x + 1, chunk->y, chunk->z),
+                    [FACE_TOP] = _world_get_chunk(world, chunk->x, chunk->y, chunk->z + 1),
+                    [FACE_BACK] = _world_get_chunk(world, chunk->x, chunk->y + 1, chunk->z),
+                    [FACE_LEFT] = _world_get_chunk(world, chunk->x - 1, chunk->y, chunk->z),
+                    [FACE_BOT] = _world_get_chunk(world, chunk->x, chunk->y, chunk->z - 1),
+                };
+
+                chunk_mesh_update(chunk, nearby_chunks);
+            }
+        }
+    }
+}
+
 int load_world(sqlite3 *db, struct World *world, const struct Camera *cam) {
     int loaded_chunks = 0, errors = 0;
 
@@ -219,6 +247,8 @@ int load_world(sqlite3 *db, struct World *world, const struct Camera *cam) {
             }
         }
     }
+
+    _world_update_chunk_meshes(world);
 
     printf("World loaded: %d chunks, %d errors\n", loaded_chunks, errors);
 
@@ -263,6 +293,8 @@ void update_world(struct World *world, struct Camera *cam) {
     if (free_indices_cnt > 0) {
         _load_new_chunks_in_range(world, cam, free_indices, free_indices_cnt);
     }
+
+    _world_update_chunk_meshes(world);
 
     world->center_x = cam->chunk_x;
     world->center_y = cam->chunk_y;

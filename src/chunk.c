@@ -1,6 +1,8 @@
 #include "chunk.h"
 
 #include <math.h>
+#include <stddef.h>
+#include <stdio.h>
 
 #define WORLD_GEN_FUNC(x, y) (8.0f * sin(0.125f * x) * sin(0.125f * y) + 10.0f)
 
@@ -51,15 +53,6 @@ static const float CUBE_VERTICES[] = {
 };
 // clang-format on
 
-enum CubeFace {
-    FACE_FRONT = 0,
-    FACE_RIGHT,
-    FACE_TOP,
-    FACE_BACK,
-    FACE_LEFT,
-    FACE_BOT,
-};
-
 static void _append_face_vert_to_arr(float *vertices, unsigned *n_vertices, unsigned *indices,
                                      unsigned *n_indices, const int x, const int y, const int z,
                                      const enum CubeFace face) {
@@ -90,24 +83,42 @@ static void _append_face_vert_to_arr(float *vertices, unsigned *n_vertices, unsi
     *n_vertices += 24;
 }
 
-static void _add_visible_faces(const struct Chunk *chunk, float *vertices, unsigned *n_vertices,
-                               unsigned *indices, unsigned *n_indices, const int x, const int y,
-                               const int z) {
+static bool _is_face_visible(const struct Chunk *chunk, const struct Chunk *nearby[6], const int x,
+                             const int y, const int z, const enum CubeFace face) {
+    const int directions[6][3] = {
+        {0, -1, 0},  // FACE_FRONT
+        {1, 0, 0},   // FACE_RIGHT
+        {0, 0, 1},   // FACE_TOP
+        {0, 1, 0},   // FACE_BACK
+        {-1, 0, 0},  // FACE_LEFT
+        {0, 0, -1},  // FACE_BOTTOM
+    };
+    const int nx = x + directions[face][0];
+    const int ny = y + directions[face][1];
+    const int nz = z + directions[face][2];
+
+    if (nx >= 0 && nx < CHUNK_SIZE && ny >= 0 && ny < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE)
+        return !chunk->data[nz][ny][nx];
+
+    if (nearby[face] == NULL) return true;
+
+    const int neighbor_x = (nx + CHUNK_SIZE) % CHUNK_SIZE;
+    const int neighbor_y = (ny + CHUNK_SIZE) % CHUNK_SIZE;
+    const int neighbor_z = (nz + CHUNK_SIZE) % CHUNK_SIZE;
+
+    return !nearby[face]->data[neighbor_z][neighbor_y][neighbor_x];
+}
+
+static void _add_visible_faces(const struct Chunk *chunk, const struct Chunk *nearby[6],
+                               float *vertices, unsigned *n_vertices, unsigned *indices,
+                               unsigned *n_indices, const int x, const int y, const int z) {
     if (!chunk->data[z][y][x]) return;
 
-    if (x + 1 >= CHUNK_SIZE || !chunk->data[z][y][x + 1])
-        _append_face_vert_to_arr(vertices, n_vertices, indices, n_indices, x, y, z, FACE_RIGHT);
-    if (y + 1 >= CHUNK_SIZE || !chunk->data[z][y + 1][x])
-        _append_face_vert_to_arr(vertices, n_vertices, indices, n_indices, x, y, z, FACE_BACK);
-    if (z + 1 >= CHUNK_SIZE || !chunk->data[z + 1][y][x])
-        _append_face_vert_to_arr(vertices, n_vertices, indices, n_indices, x, y, z, FACE_TOP);
-
-    if (x - 1 < 0 || !chunk->data[z][y][x - 1])
-        _append_face_vert_to_arr(vertices, n_vertices, indices, n_indices, x, y, z, FACE_LEFT);
-    if (y - 1 < 0 || !chunk->data[z][y - 1][x])
-        _append_face_vert_to_arr(vertices, n_vertices, indices, n_indices, x, y, z, FACE_FRONT);
-    if (z - 1 < 0 || !chunk->data[z - 1][y][x])
-        _append_face_vert_to_arr(vertices, n_vertices, indices, n_indices, x, y, z, FACE_BOT);
+    for (enum CubeFace face = 0; face < 6; face++) {
+        if (_is_face_visible(chunk, nearby, x, y, z, face)) {
+            _append_face_vert_to_arr(vertices, n_vertices, indices, n_indices, x, y, z, face);
+        }
+    }
 }
 
 void chunk_init(struct Chunk *chunk, const int x, const int y, const int z) {
@@ -139,7 +150,7 @@ void chunk_gen(struct Chunk *chunk, const int x, const int y, const int z) {
     chunk->modified_unsaved = true;
 }
 
-void chunk_mesh_update(struct Chunk *chunk) {
+void chunk_mesh_update(struct Chunk *chunk, const struct Chunk *nearby[6]) {
     chunk->modified = false;
 
     float vertices[CHUNK_VOLUME * 6 * 6 * 4];
@@ -151,7 +162,8 @@ void chunk_mesh_update(struct Chunk *chunk) {
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_SIZE; y++) {
             for (int z = 0; z < CHUNK_SIZE; z++) {
-                _add_visible_faces(chunk, vertices, &n_vertices, indices, &n_indices, x, y, z);
+                _add_visible_faces(chunk, nearby, vertices, &n_vertices, indices, &n_indices, x, y,
+                                   z);
             }
         }
     }
