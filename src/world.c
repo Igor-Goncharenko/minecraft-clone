@@ -9,6 +9,61 @@
 #include "camera.h"
 #include "chunk.h"
 
+static unsigned _hash_chunk_coords(const int x, const int y, const int z) {
+    return (unsigned)((x * 73856093) ^ (y * 19349663) ^ (z * 83492791)) % WORLD_HASH_SIZE;
+}
+
+static void _hash_table_init(struct World *world) {
+    for (int i = 0; i < WORLD_HASH_SIZE; i++) {
+        world->chunk_hash_table[i] = NULL;
+    }
+}
+
+static void _hash_table_destroy(struct World *world) {
+    for (int i = 0; i < WORLD_HASH_SIZE; i++) {
+        struct ChunkEntry *entry = world->chunk_hash_table[i];
+        while (entry != NULL) {
+            struct ChunkEntry *next = entry->next;
+            free(entry);
+            entry = next;
+        }
+    }
+}
+
+static void _hash_table_add(struct World *world, struct Chunk *chunk) {
+    unsigned hash = _hash_chunk_coords(chunk->x, chunk->y, chunk->z);
+    struct ChunkEntry *entry = malloc(sizeof(struct ChunkEntry));
+    entry->chunk = chunk;
+    entry->next = world->chunk_hash_table[hash];
+    world->chunk_hash_table[hash] = entry;
+}
+
+static struct Chunk *_hash_table_find(const struct World *world, const int x, const int y,
+                                      const int z) {
+    unsigned hash = _hash_chunk_coords(x, y, z);
+
+    for (struct ChunkEntry *entry = world->chunk_hash_table[hash]; entry; entry = entry->next) {
+        if (entry->chunk->x == x && entry->chunk->y == y && entry->chunk->z == z) {
+            return entry->chunk;
+        }
+    }
+    return NULL;
+}
+
+static void _hash_table_remove(struct World *world, const int x, const int y, const int z) {
+    unsigned hash = _hash_chunk_coords(x, y, z);
+    struct ChunkEntry **prev = &world->chunk_hash_table[hash];
+
+    for (struct ChunkEntry *entry = world->chunk_hash_table[hash]; entry; entry = entry->next) {
+        if (entry->chunk->x == x && entry->chunk->y == y && entry->chunk->z == z) {
+            *prev = entry->next;
+            free(entry);
+            return;
+        }
+        prev = &entry->next;
+    }
+}
+
 static int _world_create_open_table(sqlite3 *db) {
     int rc;
     char *err_msg = NULL;
@@ -145,6 +200,7 @@ static int _unload_chunk_out_of_range(struct World *world, struct Camera *cam, i
                 if (!_chunk_in_render_dist(chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z)) {
                     free_indices[free_indices_cnt++] = idx;
                     _world_save_chunk(world->db, chunk);
+                    _hash_table_remove(world, chunk->x, chunk->y, chunk->z);
                 }
             }
         }
@@ -173,19 +229,11 @@ static void _load_new_chunks_in_range(struct World *world, struct Camera *cam,
                                            world->center_z)) {
                     struct Chunk *chunk = &world->chunks[free_indices[--chunk_to_load_left]];
                     _world_load_chunk(world->db, x, y, z, chunk);
+                    _hash_table_add(world, chunk);
                 }
             }
         }
     }
-}
-
-static struct Chunk *_world_get_chunk(const struct World *world, const int x, const int y,
-                                      const int z) {
-    for (int i = 0; i < WORLD_VOLUME; i++) {
-        struct Chunk *chunk = &world->chunks[i];
-        if (chunk->x == x && chunk->y == y && chunk->z == z) return chunk;
-    }
-    return NULL;
 }
 
 static void _world_update_chunk_meshes(struct World *world) {
@@ -196,12 +244,12 @@ static void _world_update_chunk_meshes(struct World *world) {
                 struct Chunk *chunk = &world->chunks[idx];
 
                 const struct Chunk *nearby_chunks[6] = {
-                    [FACE_FRONT] = _world_get_chunk(world, chunk->x, chunk->y - 1, chunk->z),
-                    [FACE_RIGHT] = _world_get_chunk(world, chunk->x + 1, chunk->y, chunk->z),
-                    [FACE_TOP] = _world_get_chunk(world, chunk->x, chunk->y, chunk->z + 1),
-                    [FACE_BACK] = _world_get_chunk(world, chunk->x, chunk->y + 1, chunk->z),
-                    [FACE_LEFT] = _world_get_chunk(world, chunk->x - 1, chunk->y, chunk->z),
-                    [FACE_BOT] = _world_get_chunk(world, chunk->x, chunk->y, chunk->z - 1),
+                    [FACE_FRONT] = _hash_table_find(world, chunk->x, chunk->y - 1, chunk->z),
+                    [FACE_RIGHT] = _hash_table_find(world, chunk->x + 1, chunk->y, chunk->z),
+                    [FACE_TOP] = _hash_table_find(world, chunk->x, chunk->y, chunk->z + 1),
+                    [FACE_BACK] = _hash_table_find(world, chunk->x, chunk->y + 1, chunk->z),
+                    [FACE_LEFT] = _hash_table_find(world, chunk->x - 1, chunk->y, chunk->z),
+                    [FACE_BOT] = _hash_table_find(world, chunk->x, chunk->y, chunk->z - 1),
                 };
 
                 chunk_mesh_update(chunk, nearby_chunks);
@@ -224,6 +272,8 @@ int load_world(sqlite3 *db, struct World *world, const struct Camera *cam) {
         return 1;
     }
 
+    _hash_table_init(world);
+
     world->chunks = malloc(sizeof(struct Chunk) * WORLD_VOLUME);
     if (world->chunks == NULL) {
         fprintf(stderr, "malloc failed\n");
@@ -240,10 +290,12 @@ int load_world(sqlite3 *db, struct World *world, const struct Camera *cam) {
             for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
                 int idx = zi * LOADED_SIDE * LOADED_SIDE + yi * LOADED_SIDE + xi;
                 struct Chunk *chunk = &world->chunks[idx];
-                if (_world_load_chunk(world->db, x, y, z, chunk))
+                if (_world_load_chunk(world->db, x, y, z, chunk)) {
                     errors++;
-                else
+                } else {
                     loaded_chunks++;
+                    _hash_table_add(world, chunk);
+                }
             }
         }
     }
@@ -275,6 +327,7 @@ int close_world(struct World *world) {
         free(world->chunks);
     }
 
+    _hash_table_destroy(world);
     printf("World saved: %d chunk, %d fatal errors.\n", saved_chunks, errors);
 
     return 0;
