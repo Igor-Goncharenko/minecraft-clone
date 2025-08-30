@@ -10,14 +10,10 @@ struct Mesh {
     unsigned vertex_count;
 };
 
-void create_mesh(struct Mesh *mesh);
-
 void upload_mesh_data(struct Mesh *mesh, const float *vertices, const size_t vertex_count,
                       const unsigned int *indices, const size_t index_count);
 
 void delete_mesh(struct Mesh *mesh);
-
-void mesh_bind(const struct Mesh *mesh);
 
 void mesh_draw(const struct Mesh *mesh);
 

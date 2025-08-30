@@ -128,7 +128,6 @@ void chunk_init(struct Chunk *chunk, const int x, const int y, const int z) {
     chunk->x = x;
     chunk->y = y;
     chunk->z = z;
-    create_mesh(&chunk->mesh);
 }
 
 void chunk_destroy(struct Chunk *chunk) {
@@ -153,6 +152,7 @@ void chunk_gen(struct Chunk *chunk) {
 void chunk_mesh_update(struct Chunk *chunk, const struct Chunk *nearby[6]) {
     const size_t max_vertices = CHUNK_VOLUME * 6 * 6 * 4;
     const size_t max_indices = CHUNK_VOLUME * 6 * 6;
+
     chunk->modified = false;
 
     unsigned n_indices = 0;
