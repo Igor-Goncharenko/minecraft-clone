@@ -50,19 +50,19 @@ static struct Chunk *_hash_table_find(const struct World *world, const int x, co
     return NULL;
 }
 
-static void _hash_table_remove(struct World *world, const int x, const int y, const int z) {
-    unsigned hash = _hash_chunk_coords(x, y, z);
-    struct ChunkEntry **prev = &world->chunk_hash_table[hash];
-
-    for (struct ChunkEntry *entry = world->chunk_hash_table[hash]; entry; entry = entry->next) {
-        if (entry->chunk->x == x && entry->chunk->y == y && entry->chunk->z == z) {
-            *prev = entry->next;
-            free(entry);
-            return;
-        }
-        prev = &entry->next;
-    }
-}
+// static void _hash_table_remove(struct World *world, const int x, const int y, const int z) {
+//     unsigned hash = _hash_chunk_coords(x, y, z);
+//     struct ChunkEntry **prev = &world->chunk_hash_table[hash];
+//
+//     for (struct ChunkEntry *entry = world->chunk_hash_table[hash]; entry; entry = entry->next) {
+//         if (entry->chunk->x == x && entry->chunk->y == y && entry->chunk->z == z) {
+//             *prev = entry->next;
+//             free(entry);
+//             return;
+//         }
+//         prev = &entry->next;
+//     }
+// }
 
 static int _world_create_open_table(sqlite3 *db) {
     int rc;
@@ -185,23 +185,28 @@ static bool _chunk_in_render_dist(const struct Chunk *chunk, const int center_x,
 static int _unload_chunk_out_of_range(struct World *world, struct Camera *cam, int *free_indices) {
     int free_indices_cnt = 0;
 
-    int x = world->center_x - RENDER_DISTANCE;
+    for (int i = 0; i < WORLD_HASH_SIZE; i++) {
+        struct ChunkEntry *entry = world->chunk_hash_table[i];
+        struct ChunkEntry *prev = NULL;
+        while (entry) {
+            struct Chunk *chunk = entry->chunk;
 
-    for (int xi = 0; xi < LOADED_SIDE; xi++, x++) {
-        int y = world->center_y - RENDER_DISTANCE;
+            if (!_chunk_in_render_dist(chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z)) {
+                _world_save_chunk(world->db, chunk);
+                free_indices[free_indices_cnt++] = chunk - world->chunks;
 
-        for (int yi = 0; yi < LOADED_SIDE; yi++, y++) {
-            int z = world->center_z - RENDER_DISTANCE;
-
-            for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
-                int idx = zi * LOADED_SIDE * LOADED_SIDE + yi * LOADED_SIDE + xi;
-                struct Chunk *chunk = &world->chunks[idx];
-
-                if (!_chunk_in_render_dist(chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z)) {
-                    free_indices[free_indices_cnt++] = idx;
-                    _world_save_chunk(world->db, chunk);
-                    _hash_table_remove(world, chunk->x, chunk->y, chunk->z);
+                if (prev) {
+                    prev->next = entry->next;
+                } else {
+                    world->chunk_hash_table[i] = entry->next;
                 }
+
+                struct ChunkEntry *to_free = entry;
+                entry = entry->next;
+                free(to_free);
+            } else {
+                prev = entry;
+                entry = entry->next;
             }
         }
     }
@@ -211,23 +216,23 @@ static int _unload_chunk_out_of_range(struct World *world, struct Camera *cam, i
 
 static void _load_new_chunks_in_range(struct World *world, struct Camera *cam,
                                       const int *free_indices, const int free_indices_cnt) {
-    int chunk_to_load_left = free_indices_cnt;
+    int chunks_loaded = 0;
 
-    int x = x = cam->chunk_x - RENDER_DISTANCE;
+    for (int dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; dx++) {
+        for (int dy = -RENDER_DISTANCE; dy <= RENDER_DISTANCE; dy++) {
+            for (int dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; dz++) {
+                int x = cam->chunk_x + dx;
+                int y = cam->chunk_y + dy;
+                int z = cam->chunk_z + dz;
 
-    for (int xi = 0; xi < LOADED_SIDE; xi++, x++) {
-        int y = cam->chunk_y - RENDER_DISTANCE;
+                if (_hash_table_find(world, x, y, z) != NULL) {
+                    continue;
+                }
 
-        for (int yi = 0; yi < LOADED_SIDE; yi++, y++) {
-            int z = cam->chunk_z - RENDER_DISTANCE;
+                if (chunks_loaded < free_indices_cnt) {
+                    int idx = free_indices[chunks_loaded++];
+                    struct Chunk *chunk = &world->chunks[idx];
 
-            for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
-                struct Chunk test_chunk = {.x = x, .y = y, .z = z};
-
-                if (_chunk_in_render_dist(&test_chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z) &&
-                    !_chunk_in_render_dist(&test_chunk, world->center_x, world->center_y,
-                                           world->center_z)) {
-                    struct Chunk *chunk = &world->chunks[free_indices[--chunk_to_load_left]];
                     _world_load_chunk(world->db, x, y, z, chunk);
                     _hash_table_add(world, chunk);
                 }
@@ -235,6 +240,32 @@ static void _load_new_chunks_in_range(struct World *world, struct Camera *cam,
         }
     }
 }
+
+//     int chunk_to_load_left = free_indices_cnt;
+//
+//     int x = x = cam->chunk_x - RENDER_DISTANCE;
+//
+//     for (int xi = 0; xi < LOADED_SIDE; xi++, x++) {
+//         int y = cam->chunk_y - RENDER_DISTANCE;
+//
+//         for (int yi = 0; yi < LOADED_SIDE; yi++, y++) {
+//             int z = cam->chunk_z - RENDER_DISTANCE;
+//
+//             for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
+//                 struct Chunk test_chunk = {.x = x, .y = y, .z = z};
+//
+//                 if (_chunk_in_render_dist(&test_chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z)
+//                 &&
+//                     !_chunk_in_render_dist(&test_chunk, world->center_x, world->center_y,
+//                                            world->center_z)) {
+//                     struct Chunk *chunk = &world->chunks[free_indices[--chunk_to_load_left]];
+//                     _world_load_chunk(world->db, x, y, z, chunk);
+//                     _hash_table_add(world, chunk);
+//                 }
+//             }
+//         }
+//     }
+// }
 
 static void _world_update_chunk_meshes(struct World *world) {
     for (int xi = 0; xi < LOADED_SIDE; xi++) {
