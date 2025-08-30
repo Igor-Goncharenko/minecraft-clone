@@ -16,10 +16,6 @@ void upload_mesh_data(struct Mesh *mesh, const float *vertices, const size_t ver
 
     if (index_count == 0 || vertex_count == 0) return;
 
-    glGenVertexArrays(1, &mesh->vao);
-    glGenBuffers(1, &mesh->vbo);
-    glGenBuffers(1, &mesh->ebo);
-
     glBindVertexArray(mesh->vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo);
@@ -40,9 +36,18 @@ void upload_mesh_data(struct Mesh *mesh, const float *vertices, const size_t ver
 }
 
 void delete_mesh(struct Mesh *mesh) {
-    glDeleteVertexArrays(1, &mesh->vao);
-    glDeleteBuffers(1, &mesh->vbo);
-    glDeleteBuffers(1, &mesh->ebo);
+    if (mesh->vao != 0) {
+        glDeleteVertexArrays(1, &mesh->vao);
+        mesh->vao = 0;
+    }
+    if (mesh->vbo != 0) {
+        glDeleteBuffers(1, &mesh->vbo);
+        mesh->vbo = 0;
+    }
+    if (mesh->ebo != 0) {
+        glDeleteBuffers(1, &mesh->ebo);
+        mesh->ebo = 0;
+    }
 }
 
 void mesh_bind(const struct Mesh *mesh) {

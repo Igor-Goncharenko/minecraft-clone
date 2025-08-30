@@ -7,7 +7,7 @@
 #include "camera.h"
 #include "chunk.h"
 
-#define RENDER_DISTANCE 4
+#define RENDER_DISTANCE 10
 
 #define LOADED_SIDE (RENDER_DISTANCE * 2 + 1)
 #define WORLD_VOLUME (LOADED_SIDE * LOADED_SIDE * LOADED_SIDE)

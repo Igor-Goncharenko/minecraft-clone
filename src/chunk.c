@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define WORLD_GEN_FUNC(x, y) (8.0f * sin(0.125f * x) * sin(0.125f * y) + 10.0f)
 
@@ -134,7 +135,7 @@ void chunk_destroy(struct Chunk *chunk) {
     delete_mesh(&chunk->mesh);
 }
 
-void chunk_gen(struct Chunk *chunk, const int x, const int y, const int z) {
+void chunk_gen(struct Chunk *chunk) {
     for (int ch_x = 0; ch_x < CHUNK_SIZE; ch_x++) {
         for (int ch_y = 0; ch_y < CHUNK_SIZE; ch_y++) {
             for (int ch_z = 0; ch_z < CHUNK_SIZE; ch_z++) {
@@ -146,18 +147,24 @@ void chunk_gen(struct Chunk *chunk, const int x, const int y, const int z) {
         }
     }
 
-    chunk_init(chunk, x, y, z);
     chunk->modified_unsaved = true;
 }
 
 void chunk_mesh_update(struct Chunk *chunk, const struct Chunk *nearby[6]) {
+    const size_t max_vertices = CHUNK_VOLUME * 6 * 6 * 4;
+    const size_t max_indices = CHUNK_VOLUME * 6 * 6;
     chunk->modified = false;
 
-    float vertices[CHUNK_VOLUME * 6 * 6 * 4];
+    unsigned n_indices = 0;
     unsigned n_vertices = 0;
 
-    unsigned indices[CHUNK_VOLUME * 6 * 6];
-    unsigned n_indices = 0;
+    float *vertices = malloc(sizeof(float) * max_vertices);
+    if (vertices == NULL) return;
+    unsigned *indices = malloc(sizeof(unsigned) * max_indices);
+    if (indices == NULL) {
+        free(vertices);
+        return;
+    }
 
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_SIZE; y++) {
@@ -169,4 +176,7 @@ void chunk_mesh_update(struct Chunk *chunk, const struct Chunk *nearby[6]) {
     }
 
     upload_mesh_data(&chunk->mesh, vertices, n_vertices, indices, n_indices);
+
+    free(vertices);
+    free(indices);
 }
