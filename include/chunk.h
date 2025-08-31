@@ -31,7 +31,7 @@ void chunk_init(struct Chunk *chunk, const int x, const int y, const int z);
 
 void chunk_destroy(struct Chunk *chunk);
 
-void chunk_gen(struct Chunk *chunk, const int x, const int y, const int z);
+void chunk_gen(struct Chunk *chunk);
 
 void chunk_mesh_update(struct Chunk *chunk, const struct Chunk *nearby[6]);
 

@@ -2,16 +2,25 @@
 
 #include "gfx.h"
 
-void create_mesh(struct Mesh *mesh) {
-    glGenVertexArrays(1, &mesh->vao);
-    glGenBuffers(1, &mesh->vbo);
-    glGenBuffers(1, &mesh->ebo);
-
-    mesh->vertex_count = 0;
+void delete_mesh(struct Mesh *mesh) {
+    if (mesh->vao != 0) {
+        glDeleteVertexArrays(1, &mesh->vao);
+        mesh->vao = 0;
+    }
+    if (mesh->vbo != 0) {
+        glDeleteBuffers(1, &mesh->vbo);
+        mesh->vbo = 0;
+    }
+    if (mesh->ebo != 0) {
+        glDeleteBuffers(1, &mesh->ebo);
+        mesh->ebo = 0;
+    }
 }
 
 void upload_mesh_data(struct Mesh *mesh, const float *vertices, const size_t vertex_count,
                       const unsigned *indices, const size_t index_count) {
+    delete_mesh(mesh);
+
     mesh->vertex_count = index_count;
 
     if (index_count == 0 || vertex_count == 0) return;
@@ -39,17 +48,8 @@ void upload_mesh_data(struct Mesh *mesh, const float *vertices, const size_t ver
     glBindVertexArray(0);
 }
 
-void delete_mesh(struct Mesh *mesh) {
-    glDeleteVertexArrays(1, &mesh->vao);
-    glDeleteBuffers(1, &mesh->vbo);
-    glDeleteBuffers(1, &mesh->ebo);
-}
-
-void mesh_bind(const struct Mesh *mesh) {
-    glBindVertexArray(mesh->vao);
-}
-
 void mesh_draw(const struct Mesh *mesh) {
+    if (mesh->vertex_count <= 0) return;
     glBindVertexArray(mesh->vao);
     glDrawElements(GL_TRIANGLES, mesh->vertex_count, GL_UNSIGNED_INT, 0);
 }

@@ -106,7 +106,7 @@ static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
     if (rc == SQLITE_DONE) {
         // chunk not found
         sqlite3_finalize(stmt);
-        chunk_gen(chunk, x, y, z);
+        chunk_gen(chunk);
         return 0;
     }
     if (rc != SQLITE_ROW) {
@@ -123,7 +123,7 @@ static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
         sqlite3_finalize(stmt);
         fprintf(stderr, "CHUNK[%d, %d %d]: Null data in chunk. Regenerating\n", chunk->x, chunk->y,
                 chunk->z);
-        chunk_gen(chunk, x, y, z);
+        chunk_gen(chunk);
         return 0;
     }
 
@@ -347,10 +347,12 @@ int close_world(struct World *world) {
                 for (int z = 0; z < LOADED_SIDE; z++) {
                     int idx = z * LOADED_SIDE * LOADED_SIDE + y * LOADED_SIDE + x;
                     struct Chunk *chunk = &world->chunks[idx];
-                    if (_world_save_chunk(world->db, chunk))
+                    if (_world_save_chunk(world->db, chunk)) {
                         errors++;
-                    else
+                    } else {
                         saved_chunks++;
+                        chunk_destroy(chunk);
+                    }
                     chunk->modified_unsaved = false;
                 }
             }
