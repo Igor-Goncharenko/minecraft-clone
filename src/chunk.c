@@ -125,6 +125,7 @@ static void _add_visible_faces(const struct Chunk *chunk, const struct Chunk *ne
 void chunk_init(struct Chunk *chunk, const int x, const int y, const int z) {
     chunk->modified = false;
     chunk->modified_unsaved = false;
+    chunk->mesh_created = false;
     chunk->x = x;
     chunk->y = y;
     chunk->z = z;
@@ -179,4 +180,6 @@ void chunk_mesh_update(struct Chunk *chunk, const struct Chunk *nearby[6]) {
 
     free(vertices);
     free(indices);
+
+    chunk->mesh_created = true;
 }

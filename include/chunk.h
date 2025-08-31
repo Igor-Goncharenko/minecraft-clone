@@ -19,7 +19,7 @@ enum CubeFace {
 };
 
 struct Chunk {
-    bool modified_unsaved, modified;
+    bool modified_unsaved, modified, mesh_created;
     int x, y, z;
     /* for now we have only one type of block */
     int data[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];

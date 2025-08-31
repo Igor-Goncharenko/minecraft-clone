@@ -241,38 +241,14 @@ static void _load_new_chunks_in_range(struct World *world, struct Camera *cam,
     }
 }
 
-//     int chunk_to_load_left = free_indices_cnt;
-//
-//     int x = x = cam->chunk_x - RENDER_DISTANCE;
-//
-//     for (int xi = 0; xi < LOADED_SIDE; xi++, x++) {
-//         int y = cam->chunk_y - RENDER_DISTANCE;
-//
-//         for (int yi = 0; yi < LOADED_SIDE; yi++, y++) {
-//             int z = cam->chunk_z - RENDER_DISTANCE;
-//
-//             for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
-//                 struct Chunk test_chunk = {.x = x, .y = y, .z = z};
-//
-//                 if (_chunk_in_render_dist(&test_chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z)
-//                 &&
-//                     !_chunk_in_render_dist(&test_chunk, world->center_x, world->center_y,
-//                                            world->center_z)) {
-//                     struct Chunk *chunk = &world->chunks[free_indices[--chunk_to_load_left]];
-//                     _world_load_chunk(world->db, x, y, z, chunk);
-//                     _hash_table_add(world, chunk);
-//                 }
-//             }
-//         }
-//     }
-// }
-
 static void _world_update_chunk_meshes(struct World *world) {
     for (int xi = 0; xi < LOADED_SIDE; xi++) {
         for (int yi = 0; yi < LOADED_SIDE; yi++) {
             for (int zi = 0; zi < LOADED_SIDE; zi++) {
                 const int idx = zi * LOADED_SIDE * LOADED_SIDE + yi * LOADED_SIDE + xi;
                 struct Chunk *chunk = &world->chunks[idx];
+
+                if (chunk->mesh_created) continue;
 
                 const struct Chunk *nearby_chunks[6] = {
                     [FACE_FRONT] = _hash_table_find(world, chunk->x, chunk->y - 1, chunk->z),
