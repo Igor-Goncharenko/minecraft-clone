@@ -85,91 +85,85 @@ static int _world_create_open_table(sqlite3 *db) {
     return 0;
 }
 
-static int _world_load_chunk(sqlite3 *db, const int x, const int y, const int z,
-                             struct Chunk *chunk) {
-    const char *sql = "SELECT data FROM chunks WHERE x = ? AND y = ? AND z = ?;";
-    int rc;
+static int _save_chunks_batch(sqlite3 *db, struct Chunk **chunks, const int count) {
+    const char *sql = "INSERT OR REPLACE INTO chunks (x, y, z, data) VALUES (?, ?, ?, ?)";
     sqlite3_stmt *stmt;
+    int rc;
+    int errors = 0;
+
+    if ((rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL)) != SQLITE_OK) {
+        fprintf(stderr, "Failed to prepare statement (%d): %s\n", rc, sqlite3_errmsg(db));
+        return 1;
+    }
+    sqlite3_exec(db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+
+    for (int i = 0; i < count; i++) {
+        sqlite3_bind_int(stmt, 1, chunks[i]->x);
+        sqlite3_bind_int(stmt, 2, chunks[i]->y);
+        sqlite3_bind_int(stmt, 3, chunks[i]->z);
+        sqlite3_bind_blob(stmt, 4, chunks[i]->data, sizeof(chunks[i]->data), SQLITE_STATIC);
+
+        if ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
+            fprintf(stderr, "Execution failed: %s\n", sqlite3_errmsg(db));
+            fprintf(stderr, "CHUNK[%d, %d, %d]: DB error saving chunk.\n", chunks[i]->x,
+                    chunks[i]->y, chunks[i]->z);
+            chunk_destroy(chunks[i]);
+            errors++;
+        }
+        sqlite3_reset(stmt);
+    }
+
+    sqlite3_exec(db, "COMMIT;", NULL, NULL, NULL);
+    sqlite3_finalize(stmt);
+
+    return errors;
+}
+
+static int _load_chunk_batch(sqlite3 *db, const int *coords, const int count, struct Chunk **dest) {
+    const char *sql = "SELECT data FROM chunks WHERE x=? AND y=? AND z=?";
+    sqlite3_stmt *stmt;
+    int rc;
 
     if ((rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL)) != SQLITE_OK) {
         fprintf(stderr, "Failed to prepare statement: %s\n", sqlite3_errmsg(db));
         return 1;
     }
 
-    chunk_init(chunk, x, y, z);
+    for (int i = 0; i < count; i++) {
+        const int x = coords[i * 3 + 0];
+        const int y = coords[i * 3 + 1];
+        const int z = coords[i * 3 + 2];
 
-    sqlite3_bind_int(stmt, 1, x);
-    sqlite3_bind_int(stmt, 2, y);
-    sqlite3_bind_int(stmt, 3, z);
+        chunk_init(dest[i], x, y, z);
 
-    rc = sqlite3_step(stmt);
-    if (rc == SQLITE_DONE) {
-        // chunk not found
-        sqlite3_finalize(stmt);
-        chunk_gen(chunk);
-        return 0;
-    }
-    if (rc != SQLITE_ROW) {
-        fprintf(stderr, "CHUNK[%d, %d, %d]: DB error loading chunk.\n", chunk->x, chunk->y,
-                chunk->z);
-        sqlite3_finalize(stmt);
-        return 1;
-    }
+        sqlite3_bind_int(stmt, 1, x);
+        sqlite3_bind_int(stmt, 2, y);
+        sqlite3_bind_int(stmt, 3, z);
 
-    const void *blob_data = sqlite3_column_blob(stmt, 0);
-    int blob_size = sqlite3_column_bytes(stmt, 0);
+        rc = sqlite3_step(stmt);
+        if (rc == SQLITE_ROW) {
+            const void *blob_data = sqlite3_column_blob(stmt, 0);
+            const int blob_size = sqlite3_column_bytes(stmt, 0);
 
-    if (blob_data == NULL) {
-        sqlite3_finalize(stmt);
-        fprintf(stderr, "CHUNK[%d, %d %d]: Null data in chunk. Regenerating\n", chunk->x, chunk->y,
-                chunk->z);
-        chunk_gen(chunk);
-        return 0;
-    }
+            if (blob_data != NULL && blob_size == CHUNK_BYTE_SIZE) {
+                memcpy(dest[i]->data, blob_data, blob_size);
+            } else {
+                fprintf(stderr, "CHUNK[%d, %d %d]: blob error. Regenerating\n", dest[i]->x,
+                        dest[i]->y, dest[i]->z);
+                chunk_gen(dest[i]);
+            }
+        } else if (rc == SQLITE_DONE) {
+            chunk_gen(dest[i]);
+        } else {
+            fprintf(stderr, "CHUNK[%d, %d, %d]: DB error loading chunk.\n", dest[i]->x, dest[i]->y,
+                    dest[i]->z);
+            chunk_gen(dest[i]);
+        }
 
-    if ((unsigned long)blob_size != CHUNK_BYTE_SIZE) {
-        fprintf(stderr, "CHUNK[%d, %d %d]: blob_size greater than chunk buffer: %d > %lu.\n",
-                chunk->x, chunk->y, chunk->z, blob_size, CHUNK_BYTE_SIZE);
-        sqlite3_finalize(stmt);
-        return 1;
+        sqlite3_reset(stmt);
+        sqlite3_clear_bindings(stmt);
     }
 
-    memcpy(chunk->data, blob_data, blob_size);
-    sqlite3_finalize(stmt);
-
-    return 0;
-}
-
-static int _world_save_chunk(sqlite3 *db, struct Chunk *chunk) {
-    if (!chunk->modified_unsaved) return 0;
-
-    const char *sql = "INSERT OR REPLACE INTO chunks (x, y, z, data) VALUES (?, ?, ?, ?);";
-    int rc;
-    sqlite3_stmt *stmt;
-
-    if ((rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL)) != SQLITE_OK) {
-        fprintf(stderr, "Failed to prepare statement (%d): %s\n", rc, sqlite3_errmsg(db));
-        chunk_destroy(chunk);
-
-        return 1;
-    }
-
-    sqlite3_bind_int(stmt, 1, chunk->x);
-    sqlite3_bind_int(stmt, 2, chunk->y);
-    sqlite3_bind_int(stmt, 3, chunk->z);
-    sqlite3_bind_blob(stmt, 4, chunk->data, CHUNK_BYTE_SIZE, SQLITE_STATIC);
-
-    if ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
-        fprintf(stderr, "Execution failed: %s\n", sqlite3_errmsg(db));
-        fprintf(stderr, "CHUNK[%d, %d, %d]: DB error saving chunk.\n", chunk->x, chunk->y,
-                chunk->z);
-        chunk_destroy(chunk);
-        sqlite3_finalize(stmt);
-
-        return 1;
-    }
-
-    chunk_destroy(chunk);
     sqlite3_finalize(stmt);
 
     return 0;
@@ -184,6 +178,8 @@ static bool _chunk_in_render_dist(const struct Chunk *chunk, const int center_x,
 
 static int _unload_chunk_out_of_range(struct World *world, struct Camera *cam, int *free_indices) {
     int free_indices_cnt = 0;
+    struct Chunk *to_save[WORLD_VOLUME];
+    int count = 0;
 
     for (int i = 0; i < WORLD_HASH_SIZE; i++) {
         struct ChunkEntry *entry = world->chunk_hash_table[i];
@@ -192,7 +188,9 @@ static int _unload_chunk_out_of_range(struct World *world, struct Camera *cam, i
             struct Chunk *chunk = entry->chunk;
 
             if (!_chunk_in_render_dist(chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z)) {
-                _world_save_chunk(world->db, chunk);
+                //_world_save_chunk(world->db, chunk);
+                to_save[count++] = chunk;
+                chunk_destroy(chunk);
                 free_indices[free_indices_cnt++] = chunk - world->chunks;
 
                 if (prev) {
@@ -211,12 +209,18 @@ static int _unload_chunk_out_of_range(struct World *world, struct Camera *cam, i
         }
     }
 
+    _save_chunks_batch(world->db, to_save, count);
+
     return free_indices_cnt;
 }
 
 static void _load_new_chunks_in_range(struct World *world, struct Camera *cam,
                                       const int *free_indices, const int free_indices_cnt) {
     int chunks_loaded = 0;
+
+    struct Chunk *chunks_to_load[WORLD_VOLUME];
+    int coords[WORLD_VOLUME * 3];
+    int count = 0;
 
     for (int dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; dx++) {
         for (int dy = -RENDER_DISTANCE; dy <= RENDER_DISTANCE; dy++) {
@@ -225,19 +229,24 @@ static void _load_new_chunks_in_range(struct World *world, struct Camera *cam,
                 int y = cam->chunk_y + dy;
                 int z = cam->chunk_z + dz;
 
-                if (_hash_table_find(world, x, y, z) != NULL) {
-                    continue;
-                }
-
-                if (chunks_loaded < free_indices_cnt) {
+                if (chunks_loaded < free_indices_cnt && _hash_table_find(world, x, y, z) == NULL) {
                     int idx = free_indices[chunks_loaded++];
                     struct Chunk *chunk = &world->chunks[idx];
 
-                    _world_load_chunk(world->db, x, y, z, chunk);
-                    _hash_table_add(world, chunk);
+                    coords[count * 3 + 0] = x;
+                    coords[count * 3 + 1] = y;
+                    coords[count * 3 + 2] = z;
+                    chunks_to_load[count] = chunk;
+                    count++;
                 }
             }
         }
+    }
+
+    _load_chunk_batch(world->db, coords, count, chunks_to_load);
+
+    for (int i = 0; i < count; i++) {
+        _hash_table_add(world, chunks_to_load[i]);
     }
 }
 
@@ -266,7 +275,7 @@ static void _world_update_chunk_meshes(struct World *world) {
 }
 
 int load_world(sqlite3 *db, struct World *world, const struct Camera *cam) {
-    int loaded_chunks = 0, errors = 0;
+    int errors = 0;
 
     world->db = db;
 
@@ -280,6 +289,10 @@ int load_world(sqlite3 *db, struct World *world, const struct Camera *cam) {
     }
 
     _hash_table_init(world);
+
+    struct Chunk *chunks_to_load[WORLD_VOLUME];
+    int coords[WORLD_VOLUME * 3];
+    int count = 0;
 
     world->chunks = malloc(sizeof(struct Chunk) * WORLD_VOLUME);
     if (world->chunks == NULL) {
@@ -297,47 +310,47 @@ int load_world(sqlite3 *db, struct World *world, const struct Camera *cam) {
             for (int zi = 0; zi < LOADED_SIDE; zi++, z++) {
                 int idx = zi * LOADED_SIDE * LOADED_SIDE + yi * LOADED_SIDE + xi;
                 struct Chunk *chunk = &world->chunks[idx];
-                if (_world_load_chunk(world->db, x, y, z, chunk)) {
-                    errors++;
-                } else {
-                    loaded_chunks++;
-                    _hash_table_add(world, chunk);
-                }
+
+                coords[count * 3 + 0] = x;
+                coords[count * 3 + 1] = y;
+                coords[count * 3 + 2] = z;
+                chunks_to_load[count] = chunk;
+                count++;
             }
         }
     }
 
+    _load_chunk_batch(world->db, coords, count, chunks_to_load);
+
+    for (int i = 0; i < count; i++) {
+        _hash_table_add(world, chunks_to_load[i]);
+    }
+
     _world_update_chunk_meshes(world);
 
-    printf("World loaded: %d chunks, %d errors\n", loaded_chunks, errors);
+    printf("World loaded: %d errors\n", errors);
 
     return 0;
 }
 
 int close_world(struct World *world) {
-    int saved_chunks = 0, errors = 0;
+    int errors = 0;
+
+    struct Chunk *to_save[WORLD_VOLUME];
 
     if (world->chunks != NULL) {
-        for (int x = 0; x < LOADED_SIDE; x++) {
-            for (int y = 0; y < LOADED_SIDE; y++) {
-                for (int z = 0; z < LOADED_SIDE; z++) {
-                    int idx = z * LOADED_SIDE * LOADED_SIDE + y * LOADED_SIDE + x;
-                    struct Chunk *chunk = &world->chunks[idx];
-                    if (_world_save_chunk(world->db, chunk)) {
-                        errors++;
-                    } else {
-                        saved_chunks++;
-                        chunk_destroy(chunk);
-                    }
-                    chunk->modified_unsaved = false;
-                }
-            }
+        for (int i = 0; i < WORLD_VOLUME; i++) {
+            struct Chunk *chunk = &world->chunks[i];
+            to_save[i] = chunk;
         }
+
+        errors = _save_chunks_batch(world->db, to_save, WORLD_VOLUME);
+
         free(world->chunks);
     }
 
     _hash_table_destroy(world);
-    printf("World saved: %d chunk, %d fatal errors.\n", saved_chunks, errors);
+    printf("World saved: %d errors.\n", errors);
 
     return 0;
 }
