@@ -29,6 +29,8 @@ int db_init(const char *filepath, sqlite3 **db) {
         return 1;
     }
 
+    sqlite3_exec(*db, "PRAGMA cache_size=100000;", NULL, NULL, NULL);
+
     if ((rc = sqlite3_exec(*db, "PRAGMA journal_mode=WAL;", NULL, NULL, &err_msg)) != SQLITE_OK) {
         fprintf(stderr, "SQL error(%d): %s\n", rc, err_msg);
         sqlite3_free(err_msg);

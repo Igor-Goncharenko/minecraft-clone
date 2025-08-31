@@ -7,7 +7,7 @@
 #include "camera.h"
 #include "chunk.h"
 
-#define RENDER_DISTANCE 10
+#define RENDER_DISTANCE 20
 
 #define LOADED_SIDE (RENDER_DISTANCE * 2 + 1)
 #define WORLD_VOLUME (LOADED_SIDE * LOADED_SIDE * LOADED_SIDE)
@@ -21,6 +21,9 @@ struct ChunkEntry {
 
 struct World {
     sqlite3 *db;
+    sqlite3_stmt *load_stmt;
+    sqlite3_stmt *save_stmt;
+
     struct Chunk *chunks;
     struct ChunkEntry *chunk_hash_table[WORLD_HASH_SIZE];
 
