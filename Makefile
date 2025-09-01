@@ -31,7 +31,7 @@ CC = gcc
 CFLAGS = -std=c11 -Wall -Wextra -Werror
 CFLAGS += -Iinclude -I$(LIB_DIR)/glad/include -I$(GLFW_DIR)/include -I$(CGLM_DIR)/include -I$(SQLITE_DIR)
 CFLAGS += -DPROJECT_ROOT=\"$(PROJECT_ROOT)\"
-LDFLAGS = -lm -ldl -lpthread $(LIBS)
+LDFLAGS = -lm -ldl -lz -lpthread $(LIBS)
 
 SRC = $(wildcard $(SRC_DIR)/*.c)
 SRC += $(LIB_DIR)/glad/src/glad.c

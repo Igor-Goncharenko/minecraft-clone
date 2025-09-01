@@ -5,9 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zlib.h>
 
 #include "camera.h"
 #include "chunk.h"
+#include "utils.h"
 
 static unsigned _hash_chunk_coords(const int x, const int y, const int z) {
     return (unsigned)((x * 73856093) ^ (y * 19349663) ^ (z * 83492791)) % WORLD_HASH_SIZE;
@@ -92,10 +94,22 @@ static int _save_chunks_batch(struct World *world, struct Chunk **chunks, const 
     sqlite3_exec(world->db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 
     for (int i = 0; i < count; i++) {
+        size_t compressed_size;
+        uint8_t *compressed;
+        rc = compress_chunk_data((uint8_t *)chunks[i]->data, CHUNK_BYTE_SIZE, &compressed,
+                                 &compressed_size);
+
+        if (rc == Z_OK) {
+            sqlite3_bind_blob(world->save_stmt, 4, compressed, compressed_size, SQLITE_STATIC);
+        }
+        // else {
+        //     sqlite3_bind_blob(world->save_stmt, 4, chunks[i]->data, CHUNK_BYTE_SIZE,
+        //     SQLITE_STATIC);
+        // }
+
         sqlite3_bind_int(world->save_stmt, 1, chunks[i]->x);
         sqlite3_bind_int(world->save_stmt, 2, chunks[i]->y);
         sqlite3_bind_int(world->save_stmt, 3, chunks[i]->z);
-        sqlite3_bind_blob(world->save_stmt, 4, chunks[i]->data, CHUNK_BYTE_SIZE, SQLITE_STATIC);
 
         if ((rc = sqlite3_step(world->save_stmt)) != SQLITE_DONE) {
             fprintf(stderr, "Execution failed: %s\n", sqlite3_errmsg(world->db));
@@ -133,14 +147,23 @@ static int _load_chunk_batch(struct World *world, const int *coords, const int c
         rc = sqlite3_step(world->load_stmt);
         if (rc == SQLITE_ROW) {
             const void *blob_data = sqlite3_column_blob(world->load_stmt, 0);
-            const int blob_size = sqlite3_column_bytes(world->load_stmt, 0);
+            const size_t blob_size = sqlite3_column_bytes(world->load_stmt, 0);
 
-            if (blob_data != NULL && blob_size == CHUNK_BYTE_SIZE) {
-                memcpy(dest[i]->data, blob_data, blob_size);
+            uint8_t *decompressed;
+            rc = decompress_chunk_data(blob_data, blob_size, &decompressed, CHUNK_BYTE_SIZE);
+
+            if (rc != Z_OK) {
+                fprintf(stderr, "CHUNK[%d, %d, %d]: Failed to decompress data. Regenerating\n", x,
+                        y, z);
+                chunk_gen(dest[i]);
+            } else if (blob_data != NULL && blob_size <= CHUNK_BYTE_SIZE) {
+                memcpy(dest[i]->data, decompressed, CHUNK_BYTE_SIZE);
             } else {
                 fprintf(stderr, "CHUNK[%d, %d %d]: blob error. Regenerating\n", x, y, z);
                 chunk_gen(dest[i]);
             }
+
+            if (decompressed != NULL) free(decompressed);
         } else if (rc == SQLITE_DONE) {
             chunk_gen(dest[i]);
         } else {

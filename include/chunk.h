@@ -7,7 +7,7 @@
 
 #define CHUNK_SIZE 16
 #define CHUNK_VOLUME (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE)
-#define CHUNK_BYTE_SIZE (sizeof(short) * CHUNK_VOLUME)
+#define CHUNK_BYTE_SIZE (sizeof(uint8_t) * CHUNK_VOLUME)
 
 enum CubeFace {
     FACE_FRONT = 0,
@@ -22,7 +22,7 @@ struct Chunk {
     bool modified_unsaved, modified, mesh_created;
     int x, y, z;
     /* for now we have only one type of block */
-    short data[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
+    uint8_t data[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
 
     struct Mesh mesh;
 };
