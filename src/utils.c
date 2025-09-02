@@ -49,6 +49,11 @@ int compress_chunk_data(const uint8_t* input, const size_t input_size, uint8_t**
     if (!*output) return Z_MEM_ERROR;
 
     int rc = compress(*output, output_size, input, input_size);
+    if (rc != Z_OK) {
+        free(*output);
+        *output = NULL;
+        *output_size = 0;
+    }
     return rc;
 }
 

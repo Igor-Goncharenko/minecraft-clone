@@ -100,6 +100,7 @@ static void _save_chunks_batch(struct World *world, struct Chunk **chunks, const
 
         if (rc == Z_OK && compressed_size < CHUNK_BYTE_SIZE) {
             sqlite3_bind_blob(world->save_stmt, 4, compressed, compressed_size, SQLITE_STATIC);
+            free(compressed);
         } else {
             sqlite3_bind_blob(world->save_stmt, 4, chunks[i]->data, CHUNK_BYTE_SIZE, SQLITE_STATIC);
         }
@@ -200,12 +201,11 @@ static int _unload_chunk_out_of_range(struct World *world, struct Camera *cam, i
             struct Chunk *chunk = entry->chunk;
 
             if (!_chunk_in_render_dist(chunk, cam->chunk_x, cam->chunk_y, cam->chunk_z)) {
-                //_world_save_chunk(world->db, chunk);
                 to_save[count++] = chunk;
                 chunk_destroy(chunk);
                 free_indices[free_indices_cnt++] = chunk - world->chunks;
 
-                if (prev) {
+                if (prev != NULL) {
                     prev->next = entry->next;
                 } else {
                     world->chunk_hash_table[i] = entry->next;
