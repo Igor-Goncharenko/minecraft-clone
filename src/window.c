@@ -4,6 +4,9 @@
 #include <string.h>
 
 #include "gfx.h"
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 #define UNUSED(x) (void)(x)
 
@@ -76,7 +79,7 @@ static void _glfw_mouse_cursor_cb(GLFWwindow *handle, double xpos, double ypos) 
     struct WindowState *state = glfwGetWindowUserPointer(handle);
 
     if (state->mouse.grabbed) {
-        glfwSetCursorPos(handle, state->half_width, state->half_height);
+        //glfwSetCursorPos(handle, state->half_width, state->half_height);
         state->mouse.last_xpos = state->mouse.xpos;
         state->mouse.last_ypos = state->mouse.ypos;
     }
@@ -120,7 +123,16 @@ int glfw_window_init(GLFWwindow **handle, struct WindowState *state) {
     _window_state_base_init(state);
     glfwSetWindowUserPointer(*handle, state);
 
-    glfwSetInputMode(*handle, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    //glfwSetInputMode(*handle, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+
+    // TODO: add check if mouse motion is supported
+    // glfwRawMouseMotionSupported()
+    glfwSetInputMode(*handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(*handle, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+
+#ifdef _WIN32
+    SetProcessDPIAware();
+#endif
 
     return 1;
 }

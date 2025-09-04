@@ -8,7 +8,7 @@
 
 #define CAM_DEFAULT_SPEED 0.05f
 #define CAM_SPEED_MULTIPIER 4
-#define CAM_DEFAULT_SENSIVITY 0.5f
+#define CAM_DEFAULT_SENSIVITY 0.3f
 
 struct Camera {
     vec3 pos;

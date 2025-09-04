@@ -9,7 +9,11 @@
 #include "window.h"
 #include "world.h"
 
-#define DB_FILEPATH PROJECT_ROOT "/build/world.sqlite"
+#ifdef MINECRAFT_DEBUG
+#define DB_FILEPATH PROJECT_ROOT "/world.sqlite"
+#else
+#define DB_FILEPATH "world.sqlite"
+#endif
 
 void db_close(sqlite3 **db) {
     if (*db != NULL) {

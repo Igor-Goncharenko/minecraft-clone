@@ -7,8 +7,13 @@
 #include "shader.h"
 #include "world.h"
 
+#ifdef MINECRAFT_DEBUG
 #define VERTEX_SHADER PROJECT_ROOT "/shaders/basic.vs"
 #define FRAGMENT_SHADER PROJECT_ROOT "/shaders/basic.fs"
+#else
+#define VERTEX_SHADER "shaders/basic.vs"
+#define FRAGMENT_SHADER "shaders/basic.fs"
+#endif
 
 static void _chunk_render(const struct Renderer *renderer, const struct Chunk *chunk) {
     shader_uniform_int(renderer->shader, "chunk_x", chunk->x);
