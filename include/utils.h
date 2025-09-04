@@ -6,10 +6,10 @@
 
 long load_file(const char* filename, char** res);
 
-int compress_chunk_data(const uint8_t* input, const size_t input_size, uint8_t** output,
-                        size_t* output_size);
+int compress_data(const uint8_t* input, const size_t input_size, uint8_t** output,
+                  size_t* output_size);
 
-int decompress_chunk_data(const uint8_t* input, const size_t input_size, uint8_t** output,
-                          const size_t original_size);
+int decompress_data(const uint8_t* input, const size_t input_size, uint8_t* output,
+                    const size_t original_size);
 
 #endif /* UTILS_H */

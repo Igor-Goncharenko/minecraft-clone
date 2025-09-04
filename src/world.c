@@ -93,14 +93,15 @@ static void _save_chunks_batch(struct World *world, struct Chunk **chunks, const
     sqlite3_exec(world->db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 
     for (int i = 0; i < count; i++) {
+        if (!chunks[i]->modified_unsaved) continue;
+
         size_t compressed_size;
-        uint8_t *compressed;
-        rc = compress_chunk_data((uint8_t *)chunks[i]->data, CHUNK_BYTE_SIZE, &compressed,
-                                 &compressed_size);
+        uint8_t *compressed = NULL;
+        rc = compress_data((uint8_t *)chunks[i]->data, CHUNK_BYTE_SIZE, &compressed,
+                           &compressed_size);
 
         if (rc == Z_OK && compressed_size < CHUNK_BYTE_SIZE) {
             sqlite3_bind_blob(world->save_stmt, 4, compressed, compressed_size, SQLITE_STATIC);
-            free(compressed);
         } else {
             sqlite3_bind_blob(world->save_stmt, 4, chunks[i]->data, CHUNK_BYTE_SIZE, SQLITE_STATIC);
         }
@@ -117,6 +118,8 @@ static void _save_chunks_batch(struct World *world, struct Chunk **chunks, const
 
         sqlite3_reset(world->save_stmt);
         sqlite3_clear_bindings(world->save_stmt);
+
+        if (compressed != NULL) free(compressed);
     }
 
     sqlite3_exec(world->db, "COMMIT;", NULL, NULL, NULL);
@@ -134,14 +137,11 @@ static void _load_chunk_unpack_blob_data(const void *blob_data, const size_t blo
     }
 
     if (blob_size < CHUNK_BYTE_SIZE) {
-        uint8_t *decompressed;
-        if (decompress_chunk_data(blob_data, blob_size, &decompressed, CHUNK_BYTE_SIZE) != Z_OK) {
+        if (decompress_data(blob_data, blob_size, (uint8_t *)chunk->data, CHUNK_BYTE_SIZE) !=
+            Z_OK) {
             fprintf(stderr, "CHUNK[%d, %d, %d]: Failed to decompress data. Regenerating\n",
                     chunk->x, chunk->y, chunk->z);
             chunk_gen(chunk);
-        } else {
-            memcpy(chunk->data, decompressed, CHUNK_BYTE_SIZE);
-            free(decompressed);
         }
     } else if (blob_size == CHUNK_BYTE_SIZE) {
         memcpy(chunk->data, blob_data, CHUNK_BYTE_SIZE);
