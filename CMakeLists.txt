@@ -5,6 +5,14 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
+set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+message(STATUS "Using VCPKG_ROOT: $ENV{VCPKG_ROOT}")
+message(STATUS "CMAKE_TOOLCHAIN_FILE: ${CMAKE_TOOLCHAIN_FILE}")
+
 option(BUILD_DEBUG "Build with debug symbols" ON)
 
 if (NOT EXISTS ${CMAKE_SOURCE_DIR}/libs/glfw/CMakeLists.txt OR 
@@ -50,6 +58,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_SOURCE_DIR}/libs/cglm/include"
 )
 
+find_package(SQLite3 REQUIRED)
 find_package(ZLIB REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
