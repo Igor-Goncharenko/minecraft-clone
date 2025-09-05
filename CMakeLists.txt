@@ -10,38 +10,19 @@ set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+
 message(STATUS "Using VCPKG_ROOT: $ENV{VCPKG_ROOT}")
 message(STATUS "CMAKE_TOOLCHAIN_FILE: ${CMAKE_TOOLCHAIN_FILE}")
 
+set(VCPKG_TARGET_TRIPLET "x64-linux" CACHE STRING "Vcpkg target triplet")
+message(STATUS "Using vcpkg triplet: ${VCPKG_TARGET_TRIPLET}")
+
+list(APPEND CMAKE_PREFIX_PATH 
+    "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}"
+    "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/share"
+)
+
 option(BUILD_DEBUG "Build with debug symbols" ON)
-
-if (NOT EXISTS ${CMAKE_SOURCE_DIR}/libs/glfw/CMakeLists.txt OR 
-    NOT EXISTS ${CMAKE_SOURCE_DIR}/libs/cglm/CMakeLists.txt)
-   find_package(Git REQUIRED)
-   message(STATUS "Submodules not found, initializing...")
-   execute_process(
-       COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
-       WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-       RESULT_VARIABLE GIT_SUBMOD_RESULT
-       OUTPUT_QUIET
-       ERROR_QUIET
-   )
-endif()
-
-add_subdirectory(libs/cglm)
-set_target_properties(cglm PROPERTIES
-    CGLM_STATIC ON
-    CGLM_SHARED OFF
-)
-
-add_subdirectory(libs/glfw)
-set_target_properties(glfw PROPERTIES
-    GLFW_BUILD_EXAMPLES OFF
-    GLFW_BUILD_TESTS OFF
-    GLFW_BUILD_DOCS OFF
-)
-
-find_package(SQLite3 REQUIRED)
 
 add_executable(${PROJECT_NAME})
 
@@ -54,16 +35,16 @@ target_sources(${PROJECT_NAME} PRIVATE ${SOURCE_FILES})
 target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_SOURCE_DIR}/include"
     "${CMAKE_SOURCE_DIR}/libs/glad/include"
-    "${CMAKE_SOURCE_DIR}/libs/glfw/include"
-    "${CMAKE_SOURCE_DIR}/libs/cglm/include"
 )
 
+find_package(glfw3 CONFIG REQUIRED)
+find_package(cglm CONFIG REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(ZLIB REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    cglm
     glfw
+    cglm::cglm
     SQLite::SQLite3
     ZLIB::ZLIB
 )
